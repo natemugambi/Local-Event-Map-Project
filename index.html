@@ -1,21 +1,38 @@
+<!-- index.html -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+
+  <!-- Makes website responsive on phones -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Title shown in browser tab -->
   <title>Local Event Map</title>
+
+  <!-- Connects the CSS styling file -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- Main heading shown on the page -->
   <h1>Local Event Map</h1>
 
+  <!-- Short description under heading -->
+  <p>Find events happening around San Francisco.</p>
+
+  <!-- Container where the Google Map will appear -->
   <div id="map"></div>
 
-  <!-- My JS -->
+  <!-- Connects your JavaScript file -->
   <script src="script.js"></script>
 
-  <!-- Google Maps API -->
-  <script async
+  <!-- Loads Google Maps API -->
+  <!-- Replace YOUR_NEW_API_KEY with your actual API key -->
+  <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4J9JYfucvAbtAFEn7gdG3FAU9gt3t4zw&callback=initMap">
   </script>
+
 </body>
+</html>

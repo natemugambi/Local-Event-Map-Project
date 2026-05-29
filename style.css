@@ -1,11 +1,27 @@
 body {
   font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
   text-align: center;
+  background-color: #f5f5f5;
 }
 
-#map {
-  height: 500px;
-  width: 80%;
-  margin: auto;
+/* Styles the main heading */
+h1 {
   margin-top: 20px;
+  color: #333;
+}
+
+/* Styles the paragraph text */
+p {
+  color: #666;
+}
+
+/* Styles the Google Map container */
+#map {
+  height: 500px;   /* Height of the map */
+  width: 90%;      /* Width relative to page */
+  margin: 20px auto; /* Centers map horizontally */
+  border-radius: 10px; /* Rounded corners */
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2); /* Shadow effect */
 }
