@@ -1,30 +1,56 @@
 function initMap() {
-  // Coordinates for San Francisco
-  const sanFrancisco = {
-    lat: 37.7749,
-    lng: -122.4194
-  };
+  // Center map between SF and Oakland
+  const bayArea = { lat: 37.789, lng: -122.35 };
 
-  // Creates a new Google Map
+  // Create the map
   const map = new google.maps.Map(document.getElementById("map"), {
-
-    // Starting zoom level
-    zoom: 12,
-
-    // Center point of the map
-    center: sanFrancisco,
+    zoom: 11,
+    center: bayArea,
   });
 
-  // Creates a marker on the map
-  const marker = new google.maps.Marker({
+  // Event data
+  const events = [
+    {
+      name: "Black Art Showcase",
+      lat: 37.7749,
+      lng: -122.4194,
+      city: "San Francisco",
+    },
+    {
+      name: "Oakland Community Cookout",
+      lat: 37.8044,
+      lng: -122.2712,
+      city: "Oakland",
+    },
+    {
+      name: "Afrobeats Night",
+      lat: 37.7849,
+      lng: -122.4094,
+      city: "San Francisco",
+    },
+  ];
 
-    // Marker location
-    position: sanFrancisco,
+  // Loop through each event and create a marker
+  events.forEach(function(event) {
+    const marker = new google.maps.Marker({
+      position: {
+        lat: event.lat,
+        lng: event.lng,
+      },
+      map: map,
+      title: event.name,
+    });
 
-    // Which map to place marker on
-    map: map,
+    // Popup when marker is clicked
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <h3>${event.name}</h3>
+        <p>${event.city}</p>
+      `,
+    });
 
-    // Text shown when clicking marker
-    title: "San Francisco"
+    marker.addListener("click", function() {
+      infoWindow.open(map, marker);
+    });
   });
 }
