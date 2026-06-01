@@ -19,7 +19,7 @@ p {
 
 /* Styles the Google Map container */
 #map {
-  height: 500px;   /* Height of the map */
+  height: 700px;   /* Height of the map */
   width: 90%;      /* Width relative to page */
   margin: 20px auto; /* Centers map horizontally */
   border-radius: 10px; /* Rounded corners */

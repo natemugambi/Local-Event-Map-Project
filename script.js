@@ -8,22 +8,27 @@ function initMap() {
     center: bayArea,
   });
 
+  // Categories include: Corporate & Professional, Conferences & Seminars, Festivals & Entertainment, Special Occasions, and Community Gatherings.
+
   // Event data
   const events = [
     {
       name: "Black Art Showcase",
+      category: "Festivals & Entertainment",
       lat: 37.7749,
       lng: -122.4194,
       city: "San Francisco",
     },
     {
       name: "Oakland Community Cookout",
+      category: "Community Gatherings",
       lat: 37.8044,
       lng: -122.2712,
       city: "Oakland",
     },
     {
       name: "Afrobeats Night",
+      category: "Festivals & Entertainment",
       lat: 37.7849,
       lng: -122.4094,
       city: "San Francisco",
@@ -51,6 +56,12 @@ function initMap() {
 
     marker.addListener("click", function() {
       infoWindow.open(map, marker);
+    });
+
+    card.addEventListener("click", function() {
+    map.setCenter(marker.getPosition());
+    map.setZoom(14);
+    infoWindow.open(map, marker);
     });
   });
 }
