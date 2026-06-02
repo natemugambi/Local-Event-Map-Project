@@ -35,6 +35,9 @@ function initMap() {
     },
   ];
 
+    const eventList = document.getElementById("event-list");
+
+
   // Loop through each event and create a marker
   events.forEach(function(event) {
     const marker = new google.maps.Marker({
@@ -50,12 +53,32 @@ function initMap() {
     const infoWindow = new google.maps.InfoWindow({
       content: `
         <h3>${event.name}</h3>
-        <p>${event.city}</p>
+        <p><strong>City:</strong> ${event.city}</p>
+        <p><strong>Category:</strong> ${event.category}</p>
       `,
     });
 
     marker.addListener("click", function() {
       infoWindow.open(map, marker);
     });
+
+    const card = document.createElement("div");
+    card.className = "event-card";
+
+    card.innerHTML = `
+      <h3>${event.name}</h3>
+      <p><strong>City:</strong> ${event.city}</p>
+      <p><strong>Category:</strong> ${event.category}</p>
+      <button>View on Map</button>
+    `;
+
+    card.addEventListener("click", function() {
+      map.setCenter(marker.getPosition());
+      map.setZoom(14);
+      infoWindow.open(map, marker);
+    });
+    
+    eventList.appendChild(card);
+
   });
 }
