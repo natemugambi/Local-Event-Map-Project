@@ -1,43 +1,47 @@
-<!-- index.html -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-
-  <!-- Makes website responsive on phones -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Title shown in browser tab -->
-  <title>Local Event Map</title>
-
-  <!-- Connects the CSS styling file -->
+  <title>The Gathering</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- Main heading shown on the page -->
-  <h1>Local Event Map</h1>
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <div class="logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">The <span>Gathering</span></span>
+    </div>
+    <span class="tagline">Bay Area Events</span>
+  </nav>
 
-  <!-- Short description under heading -->
-  <p>Find events happening in the Bay Area.</p>
+  <!-- MAIN LAYOUT -->
+  <div id="app-body">
 
-  <!-- Container where the Google Map will appear -->
-  <div id="map"></div>
+    <!-- LEFT: EVENT PANEL -->
+    <aside id="event-panel">
+      <div id="panel-header">
+        <h2>Events Near You</h2>
+        <div id="filter-bar">
+          <button class="filter-btn active" data-filter="All">All</button>
+          <button class="filter-btn" data-filter="Festivals & Entertainment">Festivals</button>
+          <button class="filter-btn" data-filter="Community Gatherings">Community</button>
+          <button class="filter-btn" data-filter="Conferences & Seminars">Seminars</button>
+        </div>
+      </div>
+      <div id="event-list"></div>
+    </aside>
 
-  <!-- Section for where events will be named -->
-  <section id="events-section">
-  <h2>Featured Events</h2>
-  <div id="event-list"></div>
-  </section>
+    <!-- RIGHT: MAP -->
+    <div id="map"></div>
 
-  
+  </div>
 
-  <!-- Connects your JavaScript file -->
   <script src="script.js"></script>
 
-  <!-- Loads Google Maps API -->
-  <!-- Replace YOUR_NEW_API_KEY with your actual API key -->
+  <!-- Loads Google Maps API — replace key below with your new restricted key -->
   <script async defer
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDl6zuRSeRDo8tQXC-iOZWBYBX-2BG_WyM&callback=initMap">
   </script>
