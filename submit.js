@@ -1,13 +1,18 @@
 const SERVER_URL = "https://local-event-map-project-production.up.railway.app";
 
 let geocoder;
-let resolvedLat = null;
-let resolvedLng = null;
 
 // Called by Google Maps script once loaded
 function initGeocoder() {
   geocoder = new google.maps.Geocoder();
 }
+
+// Redirect to login if not logged in
+async function checkAuth() {
+  const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
+  if (!res.ok) window.location.href = "login.html";
+}
+checkAuth();
 
 // ===== FORM SUBMIT =====
 document.getElementById("submit-form").addEventListener("submit", async function (e) {

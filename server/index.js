@@ -1,20 +1,34 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require("bcrypt");
+const session = require("express-session");
 const db = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TM_KEY = process.env.TICKETMASTER_KEY;
-const REPORT_THRESHOLD = 5; // auto-hide after this many reports
+const REPORT_THRESHOLD = 5;
 
 app.use(cors({
   origin: [
     "https://visionary-florentine-ca7743.netlify.app",
     "http://localhost:8000",
   ],
+  credentials: true,
 }));
 app.use(express.json());
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "none",
+    secure: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  },
+}));
 
 // ===== EVENTS ENDPOINT =====
 // Frontend calls: GET /api/events?keyword=afrobeats
@@ -65,6 +79,55 @@ app.get("/api/events", async (req, res) => {
   }
 });
 
+// ===== AUTH =====
+
+app.post("/api/signup", async (req, res) => {
+  const { username, email, password } = req.body;
+  if (!username || !email || !password)
+    return res.status(400).json({ error: "All fields are required" });
+
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    const result = db.prepare(
+      `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`
+    ).run(username, email, hashed);
+    req.session.userId = result.lastInsertRowid;
+    req.session.username = username;
+    res.status(201).json({ username });
+  } catch (err) {
+    if (err.message.includes("UNIQUE"))
+      return res.status(409).json({ error: "Username or email already taken" });
+    res.status(500).json({ error: "Signup failed" });
+  }
+});
+
+app.post("/api/login", async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ error: "Email and password are required" });
+
+  const user = db.prepare(`SELECT * FROM users WHERE email = ?`).get(email);
+  if (!user) return res.status(401).json({ error: "Invalid email or password" });
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(401).json({ error: "Invalid email or password" });
+
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  res.json({ username: user.username });
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy();
+  res.json({ success: true });
+});
+
+app.get("/api/me", (req, res) => {
+  if (!req.session.userId)
+    return res.status(401).json({ error: "Not logged in" });
+  res.json({ username: req.session.username, id: req.session.userId });
+});
+
 // ===== SUBMITTED EVENTS =====
 
 // Get all community-submitted events (auto-published, minus hidden/reported ones)
@@ -75,22 +138,38 @@ app.get("/api/submitted-events", (req, res) => {
   res.json(events);
 });
 
-// Submit a new event (auto-published immediately)
+// Submit a new event — must be logged in
 app.post("/api/submitted-events", (req, res) => {
+  if (!req.session.userId)
+    return res.status(401).json({ error: "You must be logged in to submit an event" });
+
   const { name, category, date, time, city, venue, lat, lng, url } = req.body;
 
-  // Basic validation — required fields
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   const stmt = db.prepare(`
-    INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  const result = stmt.run(name, category, date, time, city, venue, lat, lng, url || null);
+  const result = stmt.run(name, category, date, time, city, venue, lat, lng, url || null, req.session.userId);
 
   res.status(201).json({ id: result.lastInsertRowid });
+});
+
+// Delete own event
+app.delete("/api/submitted-events/:id", (req, res) => {
+  if (!req.session.userId)
+    return res.status(401).json({ error: "Not logged in" });
+
+  const event = db.prepare(`SELECT * FROM submitted_events WHERE id = ?`).get(req.params.id);
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  if (event.user_id !== req.session.userId)
+    return res.status(403).json({ error: "You can only delete your own events" });
+
+  db.prepare(`DELETE FROM submitted_events WHERE id = ?`).run(req.params.id);
+  res.json({ success: true });
 });
 
 // Report an event — once it crosses the threshold it's auto-hidden

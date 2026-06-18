@@ -1,0 +1,143 @@
+/* ===== AUTH PAGES (login + signup) ===== */
+body.auth-page {
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.auth-logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-logo .logo-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.auth-logo .logo-text {
+  font-size: 26px;
+  font-weight: 700;
+  color: #f0ece4;
+}
+
+.auth-logo .logo-text span {
+  color: #c9a84c;
+}
+
+.auth-card {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 32px;
+}
+
+.auth-card h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f0ece4;
+  margin-bottom: 6px;
+}
+
+.auth-card .auth-subtitle {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-form label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c9a84c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 12px;
+}
+
+.auth-form input {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #f0ece4;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #c9a84c;
+}
+
+.auth-form input::placeholder {
+  color: #555;
+}
+
+.auth-btn {
+  margin-top: 20px;
+  background: #c9a84c;
+  color: #0d0d0d;
+  border: none;
+  padding: 13px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.auth-btn:hover {
+  background: #ddbb5e;
+}
+
+.auth-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.auth-message {
+  margin-top: 12px;
+  font-size: 13px;
+  text-align: center;
+  min-height: 18px;
+}
+
+.auth-message.error { color: #e07a7a; }
+.auth-message.success { color: #6fbf73; }
+
+.auth-switch {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #666;
+}
+
+.auth-switch a {
+  color: #c9a84c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}

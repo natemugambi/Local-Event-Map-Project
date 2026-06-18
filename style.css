@@ -77,6 +77,38 @@ body {
   background: #ddbb5e;
 }
 
+.nav-username {
+  font-size: 13px;
+  color: #aaa;
+}
+
+.nav-login-link {
+  font-size: 13px;
+  color: #c9a84c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.nav-login-link:hover {
+  text-decoration: underline;
+}
+
+.logout-btn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  border-color: #c9a84c;
+  color: #c9a84c;
+}
+
 /* ===== MAIN LAYOUT ===== */
 #app-body {
   display: flex;

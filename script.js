@@ -43,6 +43,37 @@ function initMap() {
 
   setupFilters();
   loadEvents();
+  setupNav();
+}
+
+// ===== NAV AUTH STATE =====
+async function setupNav() {
+  const navAuth = document.getElementById("nav-auth");
+  try {
+    const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
+    if (res.ok) {
+      const { username } = await res.json();
+      navAuth.innerHTML = `
+        <span class="nav-username">Hi, ${username}</span>
+        <a href="submit.html" class="submit-link">+ Submit an Event</a>
+        <button class="logout-btn" id="logout-btn">Log Out</button>
+      `;
+      document.getElementById("logout-btn").addEventListener("click", async () => {
+        await fetch(`${SERVER_URL}/api/logout`, { method: "POST", credentials: "include" });
+        window.location.reload();
+      });
+    } else {
+      navAuth.innerHTML = `
+        <a href="login.html" class="nav-login-link">Log In</a>
+        <a href="signup.html" class="submit-link">Sign Up</a>
+      `;
+    }
+  } catch {
+    navAuth.innerHTML = `
+      <a href="login.html" class="nav-login-link">Log In</a>
+      <a href="signup.html" class="submit-link">Sign Up</a>
+    `;
+  }
 }
 
 // ===== FETCH EVENTS FROM BACKEND =====
