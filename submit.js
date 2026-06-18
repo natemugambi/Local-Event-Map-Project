@@ -8,9 +8,9 @@ function initGeocoder() {
 }
 
 // Redirect to login with message if not logged in
-async function checkAuth() {
-  const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
-  if (!res.ok) window.location.href = "login.html?reason=auth";
+function checkAuth() {
+  const user = localStorage.getItem("tg_user");
+  if (!user) window.location.href = "login.html?reason=auth";
 }
 checkAuth();
 

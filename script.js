@@ -49,32 +49,26 @@ function initMap() {
 // ===== NAV AUTH STATE =====
 async function setupNav() {
   const navAuth = document.getElementById("nav-auth");
+  const stored = localStorage.getItem("tg_user");
+  const user = stored ? JSON.parse(stored) : null;
 
-  // Always show the submit link — submit page handles auth redirect
-  const loggedOutHTML = `
-    <a href="login.html" class="nav-login-link">Log In</a>
-    <a href="signup.html" class="submit-link">Sign Up</a>
-    <a href="submit.html" class="nav-login-link" style="margin-left:4px;">+ Host an Event</a>
-  `;
-
-  try {
-    const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
-    if (res.ok) {
-      const { username } = await res.json();
-      navAuth.innerHTML = `
-        <span class="nav-username">Hi, ${username}</span>
-        <a href="submit.html" class="submit-link">+ Host an Event</a>
-        <button class="logout-btn" id="logout-btn">Log Out</button>
-      `;
-      document.getElementById("logout-btn").addEventListener("click", async () => {
-        await fetch(`${SERVER_URL}/api/logout`, { method: "POST", credentials: "include" });
-        window.location.reload();
-      });
-    } else {
-      navAuth.innerHTML = loggedOutHTML;
-    }
-  } catch {
-    navAuth.innerHTML = loggedOutHTML;
+  if (user) {
+    navAuth.innerHTML = `
+      <span class="nav-username">Hi, ${user.username}</span>
+      <a href="submit.html" class="submit-link">+ Host an Event</a>
+      <button class="logout-btn" id="logout-btn">Log Out</button>
+    `;
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      localStorage.removeItem("tg_user");
+      await fetch(`${SERVER_URL}/api/logout`, { method: "POST", credentials: "include" });
+      window.location.reload();
+    });
+  } else {
+    navAuth.innerHTML = `
+      <a href="login.html" class="nav-login-link">Log In</a>
+      <a href="signup.html" class="submit-link">Sign Up</a>
+      <a href="submit.html" class="nav-login-link" style="margin-left:4px;">+ Host an Event</a>
+    `;
   }
 }
 
