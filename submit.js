@@ -1,4 +1,4 @@
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://local-event-map-project-production.up.railway.app";
 
 let geocoder;
 let resolvedLat = null;

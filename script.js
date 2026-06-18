@@ -1,5 +1,5 @@
 // ===== CONFIG =====
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://local-event-map-project-production.up.railway.app";
 
 // Keywords to search — these pull Black-centered Bay Area events
 const SEARCH_KEYWORDS = [
