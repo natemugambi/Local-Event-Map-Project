@@ -141,3 +141,18 @@ body.auth-page {
 .auth-switch a:hover {
   text-decoration: underline;
 }
+
+.auth-redirect-msg {
+  background: #1f1c14;
+  border: 1px solid #c9a84c44;
+  color: #c9a84c;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 8px;
+  display: none;
+}
+
+.auth-redirect-msg.visible {
+  display: block;
+}

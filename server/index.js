@@ -102,15 +102,15 @@ app.post("/api/signup", async (req, res) => {
 });
 
 app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: "Email and password are required" });
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: "Username and password are required" });
 
-  const user = db.prepare(`SELECT * FROM users WHERE email = ?`).get(email);
-  if (!user) return res.status(401).json({ error: "Invalid email or password" });
+  const user = db.prepare(`SELECT * FROM users WHERE username = ?`).get(username);
+  if (!user) return res.status(401).json({ error: "Invalid username or password" });
 
   const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(401).json({ error: "Invalid email or password" });
+  if (!match) return res.status(401).json({ error: "Invalid username or password" });
 
   req.session.userId = user.id;
   req.session.username = user.username;

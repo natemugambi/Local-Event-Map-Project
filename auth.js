@@ -7,6 +7,13 @@ function showMessage(text, type) {
   messageEl.className = `auth-message ${type}`;
 }
 
+// Show redirect message if coming from a protected page
+const redirectMsg = document.getElementById("redirect-msg");
+if (redirectMsg && new URLSearchParams(window.location.search).get("reason") === "auth") {
+  redirectMsg.textContent = "You need to be logged in to submit an event.";
+  redirectMsg.classList.add("visible");
+}
+
 // ===== SIGNUP =====
 const signupForm = document.getElementById("signup-form");
 if (signupForm) {
@@ -46,14 +53,14 @@ if (loginForm) {
     btn.disabled = true;
     btn.textContent = "Logging in...";
 
-    const { email, password } = Object.fromEntries(new FormData(e.target));
+    const { username, password } = Object.fromEntries(new FormData(e.target));
 
     try {
       const res = await fetch(`${SERVER_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

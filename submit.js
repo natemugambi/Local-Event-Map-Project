@@ -7,10 +7,10 @@ function initGeocoder() {
   geocoder = new google.maps.Geocoder();
 }
 
-// Redirect to login if not logged in
+// Redirect to login with message if not logged in
 async function checkAuth() {
   const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
-  if (!res.ok) window.location.href = "login.html";
+  if (!res.ok) window.location.href = "login.html?reason=auth";
 }
 checkAuth();
 
