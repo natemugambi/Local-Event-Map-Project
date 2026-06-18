@@ -8,7 +8,12 @@ const PORT = process.env.PORT || 3000;
 const TM_KEY = process.env.TICKETMASTER_KEY;
 const REPORT_THRESHOLD = 5; // auto-hide after this many reports
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://visionary-florentine-ca7743.netlify.app",
+    "http://localhost:8000",
+  ],
+}));
 app.use(express.json());
 
 // ===== EVENTS ENDPOINT =====
