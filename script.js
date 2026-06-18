@@ -49,13 +49,21 @@ function initMap() {
 // ===== NAV AUTH STATE =====
 async function setupNav() {
   const navAuth = document.getElementById("nav-auth");
+
+  // Always show the submit link — submit page handles auth redirect
+  const loggedOutHTML = `
+    <a href="login.html" class="nav-login-link">Log In</a>
+    <a href="signup.html" class="submit-link">Sign Up</a>
+    <a href="submit.html" class="nav-login-link" style="margin-left:4px;">+ Host an Event</a>
+  `;
+
   try {
     const res = await fetch(`${SERVER_URL}/api/me`, { credentials: "include" });
     if (res.ok) {
       const { username } = await res.json();
       navAuth.innerHTML = `
         <span class="nav-username">Hi, ${username}</span>
-        <a href="submit.html" class="submit-link">+ Submit an Event</a>
+        <a href="submit.html" class="submit-link">+ Host an Event</a>
         <button class="logout-btn" id="logout-btn">Log Out</button>
       `;
       document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -63,16 +71,10 @@ async function setupNav() {
         window.location.reload();
       });
     } else {
-      navAuth.innerHTML = `
-        <a href="login.html" class="nav-login-link">Log In</a>
-        <a href="signup.html" class="submit-link">Sign Up</a>
-      `;
+      navAuth.innerHTML = loggedOutHTML;
     }
   } catch {
-    navAuth.innerHTML = `
-      <a href="login.html" class="nav-login-link">Log In</a>
-      <a href="signup.html" class="submit-link">Sign Up</a>
-    `;
+    navAuth.innerHTML = loggedOutHTML;
   }
 }
 
