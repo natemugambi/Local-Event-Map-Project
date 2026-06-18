@@ -1,45 +1,12 @@
-// ===== EVENT DATA =====
-const events = [
-  {
-    name: "Black Art Showcase",
-    category: "Festivals & Entertainment",
-    date: "Sat, Jun 14",
-    time: "7:00 PM",
-    city: "San Francisco",
-    venue: "SOMArts Cultural Center",
-    lat: 37.7749,
-    lng: -122.4194,
-  },
-  {
-    name: "Oakland Community Cookout",
-    category: "Community Gatherings",
-    date: "Sun, Jun 15",
-    time: "2:00 PM",
-    city: "Oakland",
-    venue: "Defremery Park",
-    lat: 37.8044,
-    lng: -122.2712,
-  },
-  {
-    name: "Afrobeats Night",
-    category: "Festivals & Entertainment",
-    date: "Fri, Jun 20",
-    time: "10:00 PM",
-    city: "San Francisco",
-    venue: "August Hall",
-    lat: 37.7849,
-    lng: -122.4094,
-  },
-  {
-    name: "Black Entrepreneurs Summit",
-    category: "Conferences & Seminars",
-    date: "Sat, Jun 21",
-    time: "10:00 AM",
-    city: "Oakland",
-    venue: "Oakland Convention Center",
-    lat: 37.8010,
-    lng: -122.2650,
-  },
+// ===== CONFIG =====
+const SERVER_URL = "http://localhost:3000";
+
+// Keywords to search — these pull Black-centered Bay Area events
+const SEARCH_KEYWORDS = [
+  "afrobeats",
+  "R&B",
+  "hip hop",
+  "juneteenth",
 ];
 
 let map;
@@ -47,6 +14,7 @@ let markers = [];
 let activeCard = null;
 let activeInfoWindow = null;
 let currentFilter = "All";
+let allEvents = [];
 
 // ===== INIT MAP =====
 function initMap() {
@@ -73,8 +41,40 @@ function initMap() {
     ],
   });
 
-  renderEvents(events);
   setupFilters();
+  loadEvents();
+}
+
+// ===== FETCH EVENTS FROM BACKEND =====
+async function loadEvents() {
+  const eventList = document.getElementById("event-list");
+  eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">Loading events...</p>`;
+
+  try {
+    // Fetch all keyword searches in parallel, plus community-submitted events
+    const [keywordResults, submittedEvents] = await Promise.all([
+      Promise.all(
+        SEARCH_KEYWORDS.map(k => fetch(`${SERVER_URL}/api/events?keyword=${encodeURIComponent(k)}`).then(r => r.json()))
+      ),
+      fetch(`${SERVER_URL}/api/submitted-events`).then(r => r.json()).catch(() => []),
+    ]);
+
+    // Mark submitted events so we can show a "Community" badge + report button
+    const taggedSubmitted = submittedEvents.map(e => ({ ...e, submitted: true }));
+
+    // Merge and deduplicate by event name
+    const seen = new Set();
+    allEvents = [...taggedSubmitted, ...keywordResults.flat()].filter(e => {
+      if (seen.has(e.name)) return false;
+      seen.add(e.name);
+      return true;
+    });
+
+    renderEvents(allEvents);
+  } catch (error) {
+    console.error("Failed to load events:", error);
+    eventList.innerHTML = `<p style="color:#888; text-align:center; padding: 40px 20px; font-size:14px;">Could not load events. Is the server running?</p>`;
+  }
 }
 
 // ===== RENDER EVENTS =====
@@ -111,10 +111,11 @@ function renderEvents(eventsToRender) {
     const infoWindow = new google.maps.InfoWindow({
       content: `
         <div style="background:#1a1a1a; color:#f0ece4; padding:12px 14px; border-radius:8px; min-width:180px; font-family:'Segoe UI',Arial,sans-serif;">
-          <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">${event.category}</div>
+          <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">${event.category}${event.submitted ? " · Community" : ""}</div>
           <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${event.name}</div>
           <div style="font-size:12px; color:#aaa;">📅 ${event.date} · ${event.time}</div>
           <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${event.venue}, ${event.city}</div>
+          ${event.submitted ? `<button class="report-btn" data-id="${event.id}" style="margin-top:8px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
         </div>
       `,
     });
@@ -126,6 +127,11 @@ function renderEvents(eventsToRender) {
       setActiveCard(index);
     });
 
+    infoWindow.addListener("domready", () => {
+      const btn = document.querySelector(`.report-btn[data-id="${event.id}"]`);
+      if (btn) btn.addEventListener("click", () => reportEvent(event.id, btn));
+    });
+
     markers.push(marker);
 
     // --- EVENT CARD ---
@@ -134,7 +140,7 @@ function renderEvents(eventsToRender) {
     card.dataset.index = index;
 
     card.innerHTML = `
-      <div class="event-card-category">${event.category}</div>
+      <div class="event-card-category">${event.category}${event.submitted ? " · Community" : ""}</div>
       <h3>${event.name}</h3>
       <div class="event-card-meta">
         <span><span class="icon">📅</span>${event.date} · ${event.time}</span>
@@ -164,8 +170,8 @@ function setupFilters() {
       this.classList.add("active");
       currentFilter = this.dataset.filter;
       const filtered = currentFilter === "All"
-        ? events
-        : events.filter(e => e.category === currentFilter);
+        ? allEvents
+        : allEvents.filter(e => e.category === currentFilter);
       renderEvents(filtered);
     });
   });
@@ -189,5 +195,16 @@ function closeActiveInfoWindow() {
   if (activeInfoWindow) {
     activeInfoWindow.close();
     activeInfoWindow = null;
+  }
+}
+
+// ===== REPORT EVENT =====
+async function reportEvent(id, btn) {
+  btn.disabled = true;
+  btn.textContent = "Reported";
+  try {
+    await fetch(`${SERVER_URL}/api/submitted-events/${id}/report`, { method: "POST" });
+  } catch (error) {
+    console.error("Failed to report event:", error);
   }
 }

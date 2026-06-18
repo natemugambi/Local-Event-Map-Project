@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit an Event — The Gathering</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="submit.css" />
+</head>
+<body class="submit-page">
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <div class="logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">The <span>Gathering</span></span>
+    </div>
+    <a href="index.html" class="back-link">← Back to Map</a>
+  </nav>
+
+  <!-- FORM -->
+  <main class="submit-container">
+    <h1>Submit an Event</h1>
+    <p class="submit-subtitle">
+      Got something happening? Add it to the map. Events are published instantly —
+      please make sure all details are accurate.
+    </p>
+
+    <form id="submit-form">
+      <label for="name">Event Name *</label>
+      <input type="text" id="name" name="name" required placeholder="e.g. Afrobeats Night" />
+
+      <label for="category">Category *</label>
+      <select id="category" name="category" required>
+        <option value="" disabled selected>Select a category</option>
+        <option value="Hip-Hop & Rap">Hip-Hop & Rap</option>
+        <option value="R&B & Soul">R&B & Soul</option>
+        <option value="Festivals & Entertainment">Festivals & Entertainment</option>
+        <option value="Comedy & Arts">Comedy & Arts</option>
+        <option value="Community Gatherings">Community Gatherings</option>
+      </select>
+
+      <div class="form-row">
+        <div>
+          <label for="date">Date *</label>
+          <input type="date" id="date" name="date" required />
+        </div>
+        <div>
+          <label for="time">Time *</label>
+          <input type="time" id="time" name="time" required />
+        </div>
+      </div>
+
+      <label for="venue">Venue Name *</label>
+      <input type="text" id="venue" name="venue" required placeholder="e.g. August Hall" />
+
+      <label for="city">City *</label>
+      <input type="text" id="city" name="city" required placeholder="e.g. Oakland" />
+
+      <label for="address">Address *</label>
+      <input type="text" id="address" name="address" required placeholder="Street address for the map pin" />
+      <p class="field-hint" id="geocode-status"></p>
+
+      <label for="url">Event Link (optional)</label>
+      <input type="url" id="url" name="url" placeholder="https://..." />
+
+      <button type="submit" id="submit-btn">Submit Event</button>
+      <p id="form-message"></p>
+    </form>
+  </main>
+
+  <script src="submit.js"></script>
+
+  <!-- Loads Google Maps API (for geocoding the address) -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDl6zuRSeRDo8tQXC-iOZWBYBX-2BG_WyM&libraries=places&callback=initGeocoder">
+  </script>
+
+</body>
+</html>

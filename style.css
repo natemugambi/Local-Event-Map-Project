@@ -56,6 +56,27 @@ body {
   text-transform: uppercase;
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.submit-link {
+  background: #c9a84c;
+  color: #0d0d0d;
+  text-decoration: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+
+.submit-link:hover {
+  background: #ddbb5e;
+}
+
 /* ===== MAIN LAYOUT ===== */
 #app-body {
   display: flex;
@@ -223,6 +244,32 @@ body {
 #map {
   flex: 1;
   height: 100%;
+}
+
+/* ===== GOOGLE MAPS INFO WINDOW OVERRIDES ===== */
+.gm-style .gm-style-iw-c {
+  background-color: #1a1a1a !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.gm-style .gm-style-iw-d {
+  overflow: hidden !important;
+}
+
+.gm-style .gm-style-iw-t::after {
+  background: #1a1a1a !important;
+}
+
+.gm-style .gm-style-iw-tc::after {
+  background: #1a1a1a !important;
+}
+
+/* Hide the default close button */
+.gm-style .gm-style-iw-c button.gm-ui-hover-effect {
+  display: none !important;
 }
 
 /* ===== MOBILE ===== */

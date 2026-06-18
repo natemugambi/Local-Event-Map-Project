@@ -1,0 +1,141 @@
+/* ===== SUBMIT PAGE LAYOUT ===== */
+body.submit-page {
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
+  display: block;
+}
+
+.back-link {
+  color: #c9a84c;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.submit-container {
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 0 20px 60px;
+}
+
+.submit-container h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #f0ece4;
+}
+
+.submit-subtitle {
+  color: #888;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+/* ===== FORM ===== */
+#submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#submit-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c9a84c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+#submit-form input,
+#submit-form select {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #f0ece4;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+#submit-form input:focus,
+#submit-form select:focus {
+  outline: none;
+  border-color: #c9a84c;
+}
+
+#submit-form input::placeholder {
+  color: #555;
+}
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.field-hint.success {
+  color: #6fbf73;
+}
+
+.field-hint.error {
+  color: #e07a7a;
+}
+
+#submit-btn {
+  margin-top: 24px;
+  background: #c9a84c;
+  color: #0d0d0d;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#submit-btn:hover {
+  background: #ddbb5e;
+}
+
+#submit-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+#form-message {
+  margin-top: 14px;
+  font-size: 14px;
+  text-align: center;
+  min-height: 20px;
+}
+
+#form-message.success {
+  color: #6fbf73;
+}
+
+#form-message.error {
+  color: #e07a7a;
+}
