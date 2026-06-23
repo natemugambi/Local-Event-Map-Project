@@ -128,12 +128,6 @@ app.get("/api/me", (req, res) => {
   res.json({ username: req.session.username, id: req.session.userId });
 });
 
-// ===== TEMP: list usernames (remove after use) =====
-app.get("/api/users", (req, res) => {
-  const users = db.prepare(`SELECT id, username, email, created_at FROM users`).all();
-  res.json(users);
-});
-
 // ===== SUBMITTED EVENTS =====
 
 // Get all community-submitted events (auto-published, minus hidden/reported ones)
