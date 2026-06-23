@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const session = require("express-session");
-const db = require("./db");
+const { pool, initDB } = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,24 +26,19 @@ app.use(session({
     httpOnly: true,
     sameSite: "none",
     secure: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 }));
 
 // ===== EVENTS ENDPOINT =====
-// Frontend calls: GET /api/events?keyword=afrobeats
 app.get("/api/events", async (req, res) => {
   const keyword = req.query.keyword || "black music";
-
   const url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TM_KEY}&keyword=${encodeURIComponent(keyword)}&latlong=37.7749,-122.4194&radius=30&unit=miles&sort=date,asc&size=20`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
 
-    console.log("Ticketmaster response:", JSON.stringify(data).slice(0, 500));
-
-    // No events found
     if (!data._embedded || !data._embedded.events) {
       return res.json([]);
     }
@@ -57,8 +52,6 @@ app.get("/api/events", async (req, res) => {
         const venue = e._embedded.venues[0];
         const date = e.dates?.start?.localDate;
         const time = e.dates?.start?.localTime;
-
-        console.log(e.name, "→", e.classifications?.[0]?.segment?.name, "|", e.classifications?.[0]?.genre?.name, "|", e.classifications?.[0]?.subGenre?.name);
         return {
           name: e.name,
           category: mapCategory(e.classifications?.[0]?.segment?.name, e.classifications?.[0]?.genre?.name),
@@ -88,15 +81,17 @@ app.post("/api/signup", async (req, res) => {
 
   try {
     const hashed = await bcrypt.hash(password, 10);
-    const result = db.prepare(
-      `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`
-    ).run(username, email, hashed);
-    req.session.userId = result.lastInsertRowid;
+    const result = await pool.query(
+      `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id`,
+      [username, email, hashed]
+    );
+    req.session.userId = result.rows[0].id;
     req.session.username = username;
     res.status(201).json({ username });
   } catch (err) {
-    if (err.message.includes("UNIQUE"))
+    if (err.code === "23505")
       return res.status(409).json({ error: "Username or email already taken" });
+    console.error("Signup error:", err);
     res.status(500).json({ error: "Signup failed" });
   }
 });
@@ -106,7 +101,8 @@ app.post("/api/login", async (req, res) => {
   if (!username || !password)
     return res.status(400).json({ error: "Username and password are required" });
 
-  const user = db.prepare(`SELECT * FROM users WHERE username = ?`).get(username);
+  const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
+  const user = result.rows[0];
   if (!user) return res.status(401).json({ error: "Invalid username or password" });
 
   const match = await bcrypt.compare(password, user.password);
@@ -130,16 +126,15 @@ app.get("/api/me", (req, res) => {
 
 // ===== SUBMITTED EVENTS =====
 
-// Get all community-submitted events (auto-published, minus hidden/reported ones)
-app.get("/api/submitted-events", (req, res) => {
-  const events = db.prepare(
-    `SELECT * FROM submitted_events WHERE report_count < ? ORDER BY created_at DESC`
-  ).all(REPORT_THRESHOLD);
-  res.json(events);
+app.get("/api/submitted-events", async (req, res) => {
+  const result = await pool.query(
+    `SELECT * FROM submitted_events WHERE report_count < $1 ORDER BY created_at DESC`,
+    [REPORT_THRESHOLD]
+  );
+  res.json(result.rows);
 });
 
-// Submit a new event — must be logged in
-app.post("/api/submitted-events", (req, res) => {
+app.post("/api/submitted-events", async (req, res) => {
   if (!req.session.userId)
     return res.status(401).json({ error: "You must be logged in to submit an event" });
 
@@ -149,33 +144,34 @@ app.post("/api/submitted-events", (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const stmt = db.prepare(`
-    INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const result = stmt.run(name, category, date, time, city, venue, lat, lng, url || null, req.session.userId);
+  const result = await pool.query(
+    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+    [name, category, date, time, city, venue, lat, lng, url || null, req.session.userId]
+  );
 
-  res.status(201).json({ id: result.lastInsertRowid });
+  res.status(201).json({ id: result.rows[0].id });
 });
 
-// Delete own event
-app.delete("/api/submitted-events/:id", (req, res) => {
+app.delete("/api/submitted-events/:id", async (req, res) => {
   if (!req.session.userId)
     return res.status(401).json({ error: "Not logged in" });
 
-  const event = db.prepare(`SELECT * FROM submitted_events WHERE id = ?`).get(req.params.id);
+  const result = await pool.query(`SELECT * FROM submitted_events WHERE id = $1`, [req.params.id]);
+  const event = result.rows[0];
   if (!event) return res.status(404).json({ error: "Event not found" });
   if (event.user_id !== req.session.userId)
     return res.status(403).json({ error: "You can only delete your own events" });
 
-  db.prepare(`DELETE FROM submitted_events WHERE id = ?`).run(req.params.id);
+  await pool.query(`DELETE FROM submitted_events WHERE id = $1`, [req.params.id]);
   res.json({ success: true });
 });
 
-// Report an event — once it crosses the threshold it's auto-hidden
-app.post("/api/submitted-events/:id/report", (req, res) => {
-  const { id } = req.params;
-  db.prepare(`UPDATE submitted_events SET report_count = report_count + 1 WHERE id = ?`).run(id);
+app.post("/api/submitted-events/:id/report", async (req, res) => {
+  await pool.query(
+    `UPDATE submitted_events SET report_count = report_count + 1 WHERE id = $1`,
+    [req.params.id]
+  );
   res.json({ success: true });
 });
 
@@ -207,6 +203,11 @@ function mapCategory(segment, genre) {
 }
 
 // ===== START SERVER =====
-app.listen(PORT, () => {
-  console.log(`The Gathering server running on http://localhost:${PORT}`);
-});
+async function start() {
+  await initDB();
+  app.listen(PORT, () => {
+    console.log(`The Gathering server running on http://localhost:${PORT}`);
+  });
+}
+
+start();
