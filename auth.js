@@ -34,7 +34,7 @@ if (signupForm) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      localStorage.setItem("tg_user", JSON.stringify({ username: data.username }));
+      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, userId: data.userId }));
       showMessage("Account created! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {
@@ -65,7 +65,7 @@ if (loginForm) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      localStorage.setItem("tg_user", JSON.stringify({ username: data.username }));
+      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, userId: data.userId }));
       showMessage("Logged in! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {

@@ -87,7 +87,7 @@ app.post("/api/signup", async (req, res) => {
     );
     req.session.userId = result.rows[0].id;
     req.session.username = username;
-    res.status(201).json({ username });
+    res.status(201).json({ username, userId: result.rows[0].id });
   } catch (err) {
     if (err.code === "23505")
       return res.status(409).json({ error: "Username or email already taken" });
@@ -110,7 +110,7 @@ app.post("/api/login", async (req, res) => {
 
   req.session.userId = user.id;
   req.session.username = user.username;
-  res.json({ username: user.username });
+  res.json({ username: user.username, userId: user.id });
 });
 
 app.post("/api/logout", (req, res) => {
@@ -135,7 +135,8 @@ app.get("/api/submitted-events", async (req, res) => {
 });
 
 app.post("/api/submitted-events", async (req, res) => {
-  if (!req.session.userId)
+  const userId = req.session.userId || req.body.user_id;
+  if (!userId)
     return res.status(401).json({ error: "You must be logged in to submit an event" });
 
   const { name, category, date, time, city, venue, lat, lng, url } = req.body;
@@ -147,7 +148,7 @@ app.post("/api/submitted-events", async (req, res) => {
   const result = await pool.query(
     `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, req.session.userId]
+    [name, category, date, time, city, venue, lat, lng, url || null, userId]
   );
 
   res.status(201).json({ id: result.rows[0].id });

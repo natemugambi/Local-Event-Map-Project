@@ -32,6 +32,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
     const coords = await geocodeAddress(addressInput.value);
 
     const formData = new FormData(e.target);
+    const stored = JSON.parse(localStorage.getItem("tg_user"));
     const payload = {
       name: formData.get("name"),
       category: formData.get("category"),
@@ -42,6 +43,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
       lat: coords.lat,
       lng: coords.lng,
       url: formData.get("url") || null,
+      user_id: stored ? stored.userId : null,
     };
 
     const response = await fetch(`${SERVER_URL}/api/submitted-events`, {
