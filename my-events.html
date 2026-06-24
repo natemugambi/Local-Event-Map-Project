@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Events — The Gathering</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="my-events.css" />
+</head>
+<body class="my-events-page">
+
+  <!-- NAVBAR -->
+  <nav id="navbar">
+    <div class="logo">
+      <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:10px;">
+        <span class="logo-icon">✦</span>
+        <span class="logo-text">The <span>Gathering</span></span>
+      </a>
+    </div>
+    <div class="nav-right">
+      <a href="index.html" class="nav-login-link">← Back to Map</a>
+      <a href="submit.html" class="submit-link">+ Host an Event</a>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="my-events-container">
+    <h1>My Events</h1>
+    <p class="my-events-subtitle">Manage events you've submitted.</p>
+    <div id="my-events-list"></div>
+  </main>
+
+  <!-- EDIT MODAL -->
+  <div id="edit-modal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>Edit Event</h2>
+      <form id="edit-form">
+        <input type="hidden" id="edit-id" />
+
+        <label for="edit-name">Event Name</label>
+        <input type="text" id="edit-name" name="name" required />
+
+        <label for="edit-category">Category</label>
+        <select id="edit-category" name="category" required>
+          <option value="Hip-Hop & Rap">Hip-Hop & Rap</option>
+          <option value="R&B & Soul">R&B & Soul</option>
+          <option value="Festivals & Entertainment">Festivals & Entertainment</option>
+          <option value="Comedy & Arts">Comedy & Arts</option>
+          <option value="Community Gatherings">Community Gatherings</option>
+        </select>
+
+        <div class="form-row">
+          <div>
+            <label for="edit-date">Date</label>
+            <input type="text" id="edit-date" name="date" required placeholder="e.g. Sat, Jun 14" />
+          </div>
+          <div>
+            <label for="edit-time">Time</label>
+            <input type="text" id="edit-time" name="time" required placeholder="e.g. 7:00 PM" />
+          </div>
+        </div>
+
+        <label for="edit-venue">Venue</label>
+        <input type="text" id="edit-venue" name="venue" required />
+
+        <label for="edit-city">City</label>
+        <input type="text" id="edit-city" name="city" required />
+
+        <label for="edit-url">Event Link</label>
+        <input type="url" id="edit-url" name="url" placeholder="https://..." />
+
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel" id="edit-cancel">Cancel</button>
+          <button type="submit" class="modal-save">Save Changes</button>
+        </div>
+        <p id="edit-message" class="edit-message"></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="my-events.js"></script>
+</body>
+</html>

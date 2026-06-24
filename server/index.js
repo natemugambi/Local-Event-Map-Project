@@ -154,17 +154,52 @@ app.post("/api/submitted-events", async (req, res) => {
   res.status(201).json({ id: result.rows[0].id });
 });
 
+// Get events for a specific user
+app.get("/api/my-events/:userId", async (req, res) => {
+  const result = await pool.query(
+    `SELECT * FROM submitted_events WHERE user_id = $1 ORDER BY created_at DESC`,
+    [req.params.userId]
+  );
+  res.json(result.rows);
+});
+
+// Delete own event
 app.delete("/api/submitted-events/:id", async (req, res) => {
-  if (!req.session.userId)
+  const userId = req.session.userId || parseInt(req.query.user_id);
+  if (!userId)
     return res.status(401).json({ error: "Not logged in" });
 
   const result = await pool.query(`SELECT * FROM submitted_events WHERE id = $1`, [req.params.id]);
   const event = result.rows[0];
   if (!event) return res.status(404).json({ error: "Event not found" });
-  if (event.user_id !== req.session.userId)
+  if (event.user_id !== userId)
     return res.status(403).json({ error: "You can only delete your own events" });
 
   await pool.query(`DELETE FROM submitted_events WHERE id = $1`, [req.params.id]);
+  res.json({ success: true });
+});
+
+// Edit own event
+app.put("/api/submitted-events/:id", async (req, res) => {
+  const userId = req.session.userId || req.body.user_id;
+  if (!userId)
+    return res.status(401).json({ error: "Not logged in" });
+
+  const result = await pool.query(`SELECT * FROM submitted_events WHERE id = $1`, [req.params.id]);
+  const event = result.rows[0];
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  if (event.user_id !== userId)
+    return res.status(403).json({ error: "You can only edit your own events" });
+
+  const { name, category, date, time, city, venue, lat, lng, url } = req.body;
+
+  await pool.query(
+    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9 WHERE id=$10`,
+    [name || event.name, category || event.category, date || event.date, time || event.time,
+     city || event.city, venue || event.venue, lat || event.lat, lng || event.lng,
+     url !== undefined ? url : event.url, req.params.id]
+  );
+
   res.json({ success: true });
 });
 

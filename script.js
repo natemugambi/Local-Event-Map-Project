@@ -55,6 +55,7 @@ async function setupNav() {
   if (user) {
     navAuth.innerHTML = `
       <span class="nav-username">Hi, ${user.username}</span>
+      <a href="my-events.html" class="nav-login-link">My Events</a>
       <a href="submit.html" class="submit-link">+ Host an Event</a>
       <button class="logout-btn" id="logout-btn">Log Out</button>
     `;

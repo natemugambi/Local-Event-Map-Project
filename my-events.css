@@ -1,0 +1,255 @@
+/* ===== MY EVENTS PAGE ===== */
+body.my-events-page {
+  height: auto;
+  min-height: 100vh;
+  overflow: auto;
+  display: block;
+}
+
+.my-events-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 0 20px 60px;
+}
+
+.my-events-container h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f0ece4;
+  margin-bottom: 6px;
+}
+
+.my-events-subtitle {
+  color: #888;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+/* ===== EVENT CARDS ===== */
+.my-event-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.my-event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.my-event-card-category {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #c9a84c;
+  font-weight: 600;
+}
+
+.my-event-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f0ece4;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.my-event-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.my-event-card-meta span {
+  font-size: 13px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.my-event-card-actions {
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid #2a2a2a;
+  padding-top: 12px;
+}
+
+.btn-edit, .btn-delete {
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-edit {
+  background: #1e1e1e;
+  border: 1px solid #c9a84c;
+  color: #c9a84c;
+}
+
+.btn-edit:hover {
+  background: #c9a84c;
+  color: #0d0d0d;
+}
+
+.btn-delete {
+  background: #1e1e1e;
+  border: 1px solid #555;
+  color: #888;
+}
+
+.btn-delete:hover {
+  border-color: #e07a7a;
+  color: #e07a7a;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.empty-state a {
+  color: #c9a84c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.empty-state a:hover {
+  text-decoration: underline;
+}
+
+/* ===== EDIT MODAL ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-card {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 14px;
+  padding: 28px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-card h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f0ece4;
+  margin-bottom: 20px;
+}
+
+.modal-card label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #c9a84c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 12px;
+  display: block;
+}
+
+.modal-card input,
+.modal-card select {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #f0ece4;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.modal-card input:focus,
+.modal-card select:focus {
+  outline: none;
+  border-color: #c9a84c;
+}
+
+.modal-card .form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-card .form-row > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-cancel {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #444;
+  color: #888;
+  padding: 11px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-cancel:hover {
+  border-color: #666;
+  color: #aaa;
+}
+
+.modal-save {
+  flex: 1;
+  background: #c9a84c;
+  border: none;
+  color: #0d0d0d;
+  padding: 11px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-save:hover {
+  background: #ddbb5e;
+}
+
+.edit-message {
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  min-height: 18px;
+}
+
+.edit-message.success { color: #6fbf73; }
+.edit-message.error { color: #e07a7a; }
