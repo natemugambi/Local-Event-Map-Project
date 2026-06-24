@@ -2,33 +2,46 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-const session = require("express-session");
+const jwt = require("jsonwebtoken");
 const { pool, initDB } = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TM_KEY = process.env.TICKETMASTER_KEY;
+const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
 
-app.use(cors({
-  origin: [
-    "https://visionary-florentine-ca7743.netlify.app",
-    "http://localhost:8000",
-  ],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: "none",
-    secure: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  },
-}));
+
+// ===== AUTH MIDDLEWARE =====
+// Extracts user from the JWT token in the Authorization header
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+  } catch {
+    req.user = null;
+  }
+  next();
+}
+
+// Use on all routes
+app.use(authenticateToken);
+
+// Require login — use on protected routes
+function requireAuth(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: "You must be logged in" });
+  next();
+}
 
 // ===== EVENTS ENDPOINT =====
 app.get("/api/events", async (req, res) => {
@@ -85,9 +98,8 @@ app.post("/api/signup", async (req, res) => {
       `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id`,
       [username, email, hashed]
     );
-    req.session.userId = result.rows[0].id;
-    req.session.username = username;
-    res.status(201).json({ username, userId: result.rows[0].id });
+    const token = jwt.sign({ userId: result.rows[0].id, username }, JWT_SECRET, { expiresIn: "7d" });
+    res.status(201).json({ username, token });
   } catch (err) {
     if (err.code === "23505")
       return res.status(409).json({ error: "Username or email already taken" });
@@ -108,20 +120,13 @@ app.post("/api/login", async (req, res) => {
   const match = await bcrypt.compare(password, user.password);
   if (!match) return res.status(401).json({ error: "Invalid username or password" });
 
-  req.session.userId = user.id;
-  req.session.username = user.username;
-  res.json({ username: user.username, userId: user.id });
-});
-
-app.post("/api/logout", (req, res) => {
-  req.session.destroy();
-  res.json({ success: true });
+  const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: "7d" });
+  res.json({ username: user.username, token });
 });
 
 app.get("/api/me", (req, res) => {
-  if (!req.session.userId)
-    return res.status(401).json({ error: "Not logged in" });
-  res.json({ username: req.session.username, id: req.session.userId });
+  if (!req.user) return res.status(401).json({ error: "Not logged in" });
+  res.json({ username: req.user.username, userId: req.user.userId });
 });
 
 // ===== SUBMITTED EVENTS =====
@@ -134,11 +139,7 @@ app.get("/api/submitted-events", async (req, res) => {
   res.json(result.rows);
 });
 
-app.post("/api/submitted-events", async (req, res) => {
-  const userId = req.session.userId || req.body.user_id;
-  if (!userId)
-    return res.status(401).json({ error: "You must be logged in to submit an event" });
-
+app.post("/api/submitted-events", requireAuth, async (req, res) => {
   const { name, category, date, time, city, venue, lat, lng, url } = req.body;
 
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null) {
@@ -148,47 +149,36 @@ app.post("/api/submitted-events", async (req, res) => {
   const result = await pool.query(
     `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, userId]
+    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId]
   );
 
   res.status(201).json({ id: result.rows[0].id });
 });
 
-// Get events for a specific user
-app.get("/api/my-events/:userId", async (req, res) => {
+app.get("/api/my-events", requireAuth, async (req, res) => {
   const result = await pool.query(
     `SELECT * FROM submitted_events WHERE user_id = $1 ORDER BY created_at DESC`,
-    [req.params.userId]
+    [req.user.userId]
   );
   res.json(result.rows);
 });
 
-// Delete own event
-app.delete("/api/submitted-events/:id", async (req, res) => {
-  const userId = req.session.userId || parseInt(req.query.user_id);
-  if (!userId)
-    return res.status(401).json({ error: "Not logged in" });
-
+app.delete("/api/submitted-events/:id", requireAuth, async (req, res) => {
   const result = await pool.query(`SELECT * FROM submitted_events WHERE id = $1`, [req.params.id]);
   const event = result.rows[0];
   if (!event) return res.status(404).json({ error: "Event not found" });
-  if (event.user_id !== userId)
+  if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only delete your own events" });
 
   await pool.query(`DELETE FROM submitted_events WHERE id = $1`, [req.params.id]);
   res.json({ success: true });
 });
 
-// Edit own event
-app.put("/api/submitted-events/:id", async (req, res) => {
-  const userId = req.session.userId || req.body.user_id;
-  if (!userId)
-    return res.status(401).json({ error: "Not logged in" });
-
+app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   const result = await pool.query(`SELECT * FROM submitted_events WHERE id = $1`, [req.params.id]);
   const event = result.rows[0];
   if (!event) return res.status(404).json({ error: "Event not found" });
-  if (event.user_id !== userId)
+  if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only edit your own events" });
 
   const { name, category, date, time, city, venue, lat, lng, url } = req.body;
