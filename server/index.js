@@ -11,7 +11,13 @@ const TM_KEY = process.env.TICKETMASTER_KEY;
 const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://visionary-florentine-ca7743.netlify.app",
+    "http://localhost:8000",
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 // ===== AUTH MIDDLEWARE =====
