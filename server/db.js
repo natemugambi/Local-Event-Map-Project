@@ -34,6 +34,11 @@ async function initDB() {
     )
   `);
 
+  // Real calendar date for expiry checks — the "date" column is display text only
+  await pool.query(`
+    ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS event_date DATE
+  `);
+
   console.log("Database tables ready");
 }
 

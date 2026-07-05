@@ -14,6 +14,9 @@ function checkAuth() {
 }
 checkAuth();
 
+// Don't allow picking past dates
+document.getElementById("date").min = new Date().toISOString().slice(0, 10);
+
 // ===== FORM SUBMIT =====
 document.getElementById("submit-form").addEventListener("submit", async function (e) {
   e.preventDefault();
@@ -37,6 +40,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
       name: formData.get("name"),
       category: formData.get("category"),
       date: formatDate(formData.get("date")),
+      event_date: formData.get("date"),
       time: formatTime(formData.get("time")),
       city: formData.get("city"),
       venue: formData.get("venue"),

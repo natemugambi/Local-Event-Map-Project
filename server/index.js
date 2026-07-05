@@ -138,24 +138,32 @@ app.get("/api/me", (req, res) => {
 // ===== SUBMITTED EVENTS =====
 
 app.get("/api/submitted-events", async (req, res) => {
+  // Past events drop off the map automatically; NULL dates (old rows) still show
   const result = await pool.query(
-    `SELECT * FROM submitted_events WHERE report_count < $1 ORDER BY created_at DESC`,
+    `SELECT * FROM submitted_events
+     WHERE report_count < $1
+       AND (event_date IS NULL OR event_date >= CURRENT_DATE)
+     ORDER BY event_date ASC NULLS LAST`,
     [REPORT_THRESHOLD]
   );
   res.json(result.rows);
 });
 
 app.post("/api/submitted-events", requireAuth, async (req, res) => {
-  const { name, category, date, time, city, venue, lat, lng, url } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
 
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  if (event_date && event_date < new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ error: "Event date can't be in the past" });
+  }
+
   const result = await pool.query(
-    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId]
+    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null]
   );
 
   res.status(201).json({ id: result.rows[0].id });
@@ -187,13 +195,13 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only edit your own events" });
 
-  const { name, category, date, time, city, venue, lat, lng, url } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
 
   await pool.query(
-    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9 WHERE id=$10`,
+    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10 WHERE id=$11`,
     [name || event.name, category || event.category, date || event.date, time || event.time,
      city || event.city, venue || event.venue, lat || event.lat, lng || event.lng,
-     url !== undefined ? url : event.url, req.params.id]
+     url !== undefined ? url : event.url, event_date || event.event_date, req.params.id]
   );
 
   res.json({ success: true });

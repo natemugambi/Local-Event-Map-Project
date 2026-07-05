@@ -12,6 +12,13 @@ function authHeaders() {
   };
 }
 
+// Convert "2026-06-20" -> "Sat, Jun 20" for display
+function formatDate(dateStr) {
+  const [year, month, day] = dateStr.split("-");
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 loadMyEvents();
 
 // ===== LOAD EVENTS =====
@@ -112,11 +119,13 @@ function openEditModal(event) {
   document.getElementById("edit-id").value = event.id;
   document.getElementById("edit-name").value = event.name;
   document.getElementById("edit-category").value = event.category;
-  document.getElementById("edit-date").value = event.date;
+  // Date picker needs ISO format (YYYY-MM-DD); pg returns event_date as an ISO timestamp string
+  document.getElementById("edit-date").value = event.event_date ? event.event_date.slice(0, 10) : "";
   document.getElementById("edit-time").value = event.time;
   document.getElementById("edit-venue").value = event.venue;
   document.getElementById("edit-city").value = event.city;
   document.getElementById("edit-url").value = event.url || "";
+  document.getElementById("edit-date").min = new Date().toISOString().slice(0, 10);
   editMessage.textContent = "";
   modal.classList.add("active");
 }
@@ -133,10 +142,12 @@ editForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const id = document.getElementById("edit-id").value;
 
+  const isoDate = document.getElementById("edit-date").value;
   const payload = {
     name: document.getElementById("edit-name").value,
     category: document.getElementById("edit-category").value,
-    date: document.getElementById("edit-date").value,
+    date: formatDate(isoDate),
+    event_date: isoDate,
     time: document.getElementById("edit-time").value,
     venue: document.getElementById("edit-venue").value,
     city: document.getElementById("edit-city").value,
