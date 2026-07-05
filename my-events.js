@@ -5,6 +5,13 @@ const stored = localStorage.getItem("tg_user");
 if (!stored) window.location.href = "login.html?reason=auth";
 const user = JSON.parse(stored);
 
+function authHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${user.token}`,
+  };
+}
+
 loadMyEvents();
 
 // ===== LOAD EVENTS =====
@@ -13,7 +20,9 @@ async function loadMyEvents() {
   list.innerHTML = `<p style="color:#666; text-align:center; padding:40px;">Loading your events...</p>`;
 
   try {
-    const res = await fetch(`${SERVER_URL}/api/my-events/${user.userId}`);
+    const res = await fetch(`${SERVER_URL}/api/my-events`, {
+      headers: authHeaders(),
+    });
     const events = await res.json();
 
     if (events.length === 0) {
@@ -48,10 +57,7 @@ async function loadMyEvents() {
         </div>
       `;
 
-      // Edit button
       card.querySelector(".btn-edit").addEventListener("click", () => openEditModal(event));
-
-      // Delete button
       card.querySelector(".btn-delete").addEventListener("click", () => deleteEvent(event.id, card));
 
       list.appendChild(card);
@@ -67,9 +73,9 @@ async function deleteEvent(id, card) {
   if (!confirm("Are you sure you want to delete this event?")) return;
 
   try {
-    const res = await fetch(`${SERVER_URL}/api/submitted-events/${id}?user_id=${user.userId}`, {
+    const res = await fetch(`${SERVER_URL}/api/submitted-events/${id}`, {
       method: "DELETE",
-      credentials: "include",
+      headers: authHeaders(),
     });
 
     if (!res.ok) {
@@ -81,7 +87,6 @@ async function deleteEvent(id, card) {
     card.style.opacity = "0";
     setTimeout(() => {
       card.remove();
-      // Check if list is empty now
       const list = document.getElementById("my-events-list");
       if (!list.querySelector(".my-event-card")) {
         list.innerHTML = `
@@ -136,14 +141,12 @@ editForm.addEventListener("submit", async (e) => {
     venue: document.getElementById("edit-venue").value,
     city: document.getElementById("edit-city").value,
     url: document.getElementById("edit-url").value || null,
-    user_id: user.userId,
   };
 
   try {
     const res = await fetch(`${SERVER_URL}/api/submitted-events/${id}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
+      headers: authHeaders(),
       body: JSON.stringify(payload),
     });
 

@@ -43,12 +43,16 @@ document.getElementById("submit-form").addEventListener("submit", async function
       lat: coords.lat,
       lng: coords.lng,
       url: formData.get("url") || null,
-      user_id: stored ? stored.userId : null,
     };
+
+    const headers = { "Content-Type": "application/json" };
+    if (stored && stored.token) {
+      headers["Authorization"] = `Bearer ${stored.token}`;
+    }
 
     const response = await fetch(`${SERVER_URL}/api/submitted-events`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
 

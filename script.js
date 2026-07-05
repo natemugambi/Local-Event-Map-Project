@@ -59,9 +59,8 @@ async function setupNav() {
       <a href="submit.html" class="submit-link">+ Host an Event</a>
       <button class="logout-btn" id="logout-btn">Log Out</button>
     `;
-    document.getElementById("logout-btn").addEventListener("click", async () => {
+    document.getElementById("logout-btn").addEventListener("click", () => {
       localStorage.removeItem("tg_user");
-      await fetch(`${SERVER_URL}/api/logout`, { method: "POST", credentials: "include" });
       window.location.reload();
     });
   } else {

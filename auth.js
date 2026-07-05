@@ -29,12 +29,11 @@ if (signupForm) {
       const res = await fetch(`${SERVER_URL}/api/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ username, email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, userId: data.userId }));
+      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, token: data.token }));
       showMessage("Account created! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {
@@ -60,12 +59,11 @@ if (loginForm) {
       const res = await fetch(`${SERVER_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, userId: data.userId }));
+      localStorage.setItem("tg_user", JSON.stringify({ username: data.username, token: data.token }));
       showMessage("Logged in! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {
