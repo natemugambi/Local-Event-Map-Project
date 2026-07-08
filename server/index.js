@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 const TM_KEY = process.env.TICKETMASTER_KEY;
 const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
+const DAILY_SUBMISSION_LIMIT = 5; // per user, rolling 24 hours
 
 app.use(cors({
   origin: [
@@ -158,6 +159,18 @@ app.post("/api/submitted-events", requireAuth, async (req, res) => {
 
   if (event_date && event_date < new Date().toISOString().slice(0, 10)) {
     return res.status(400).json({ error: "Event date can't be in the past" });
+  }
+
+  // Rate limit: cap submissions per user over a rolling 24-hour window
+  const recent = await pool.query(
+    `SELECT COUNT(*) FROM submitted_events
+     WHERE user_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+    [req.user.userId]
+  );
+  if (parseInt(recent.rows[0].count) >= DAILY_SUBMISSION_LIMIT) {
+    return res.status(429).json({
+      error: `You've reached the limit of ${DAILY_SUBMISSION_LIMIT} events per day. Try again tomorrow.`,
+    });
   }
 
   const result = await pool.query(

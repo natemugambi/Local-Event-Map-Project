@@ -7,6 +7,9 @@ function initGeocoder() {
   geocoder = new google.maps.Geocoder();
 }
 
+// Don't allow picking past dates
+document.getElementById("date").min = new Date().toISOString().slice(0, 10);
+
 // Redirect to login with message if not logged in
 function checkAuth() {
   const user = localStorage.getItem("tg_user");
