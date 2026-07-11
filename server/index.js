@@ -259,7 +259,7 @@ function mapCategory(segment, genre) {
 async function start() {
   await initDB();
   app.listen(PORT, () => {
-    console.log(`The Gathering server running on http://localhost:${PORT}`);
+    console.log(`The Spot server running on http://localhost:${PORT}`);
   });
 }
 

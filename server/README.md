@@ -1,4 +1,4 @@
-# Backend — The Gathering API
+# Backend — The Spot API
 
 Node.js + Express server. Proxies Ticketmaster (keeping the API key off the browser), manages accounts with JWT auth, and stores community-submitted events in PostgreSQL.
 

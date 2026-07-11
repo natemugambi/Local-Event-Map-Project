@@ -1,8 +1,8 @@
-# The Gathering 🗺️✦
+# The Spot 🗺️✦
 
 A map-first web app for discovering **Black-centered events in the San Francisco Bay Area**, aimed at people in their 20s. Larger events (concerts, shows, festivals) are pulled automatically from the Ticketmaster API; smaller community events — nightlife, cookouts, popups — are submitted directly by local organizers.
 
-> **Working name.** "The Gathering" is a placeholder while branding is finalized.
+> Formerly "The Gathering" during early development.
 
 ## Live Site
 
