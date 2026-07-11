@@ -23,6 +23,8 @@ function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
     zoom: 12,
     center: bayArea,
+    clickableIcons: false, // disable Google's own POI popups — only our event pins are interactive
+
     styles: [
       { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
       { elementType: "labels.text.fill", stylers: [{ color: "#888888" }] },

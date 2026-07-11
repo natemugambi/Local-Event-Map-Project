@@ -304,6 +304,19 @@ body {
   display: none !important;
 }
 
+/* Newer Maps versions add a white header row to info windows — remove it */
+.gm-style .gm-style-iw-chr {
+  display: none !important;
+}
+
+.gm-style .gm-style-iw-ch {
+  display: none !important;
+}
+
+.gm-style .gm-style-iw {
+  background-color: #1a1a1a !important;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
   body {
