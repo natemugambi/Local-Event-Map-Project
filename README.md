@@ -8,8 +8,10 @@ A map-first web app for discovering **Black-centered events in the San Francisco
 
 | Piece | URL | Hosted on |
 |---|---|---|
-| Frontend | https://visionary-florentine-ca7743.netlify.app | Netlify |
+| Frontend | https://local-event-map-project.mnate576-1f2.workers.dev | Cloudflare Pages |
 | Backend API | https://local-event-map-project-production.up.railway.app | Railway |
+
+> Previously hosted on Netlify (visionary-florentine-ca7743.netlify.app); moved after free-tier credits ran out.
 
 Both auto-deploy from this repo's `main` branch.
 
