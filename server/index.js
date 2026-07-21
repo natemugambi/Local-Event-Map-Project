@@ -14,6 +14,8 @@ const DAILY_SUBMISSION_LIMIT = 5; // per user, rolling 24 hours
 
 app.use(cors({
   origin: [
+    "https://findthespot.net",
+    "https://www.findthespot.net",
     "https://local-event-map-project.mnate576-1f2.workers.dev",
     "https://visionary-florentine-ca7743.netlify.app",
     "http://localhost:8000",
