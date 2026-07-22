@@ -272,6 +272,23 @@ body {
   font-size: 13px;
 }
 
+.event-card-link {
+  display: inline-block;
+  margin-top: 10px;
+  background: #c9a84c;
+  color: #0d0d0d;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.event-card-link:hover {
+  background: #ddbb5e;
+}
+
 /* ===== MAP (RIGHT) ===== */
 #map {
   flex: 1;

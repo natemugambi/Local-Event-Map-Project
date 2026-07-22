@@ -144,7 +144,8 @@ function renderEvents(eventsToRender) {
           <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${event.name}</div>
           <div style="font-size:12px; color:#aaa;">📅 ${event.date} · ${event.time}</div>
           <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${event.venue}, ${event.city}</div>
-          ${event.submitted ? `<button class="report-btn" data-id="${event.id}" style="margin-top:8px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
+          ${event.url ? `<a href="${event.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:8px; background:#c9a84c; color:#0d0d0d; font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; text-decoration:none;">${event.submitted ? "Event Link" : "View Tickets"}</a>` : ""}
+          ${event.submitted ? `<button class="report-btn" data-id="${event.id}" style="margin-top:8px; margin-left:6px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
         </div>
       `,
     });
@@ -175,6 +176,7 @@ function renderEvents(eventsToRender) {
         <span><span class="icon">📅</span>${event.date} · ${event.time}</span>
         <span><span class="icon">📍</span>${event.venue}, ${event.city}</span>
       </div>
+      ${event.url ? `<a href="${event.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
     `;
 
     card.addEventListener("click", function () {
@@ -185,6 +187,11 @@ function renderEvents(eventsToRender) {
       activeInfoWindow = infoWindow;
       setActiveCard(index);
     });
+
+    const cardLink = card.querySelector(".event-card-link");
+    if (cardLink) {
+      cardLink.addEventListener("click", (e) => e.stopPropagation());
+    }
 
     eventList.appendChild(card);
   });
