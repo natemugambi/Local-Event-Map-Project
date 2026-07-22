@@ -61,8 +61,9 @@ body.submit-page {
   color: #f0ece4;
   padding: 12px 14px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px; /* 16px+ prevents iOS Safari from auto-zooming on focus */
   font-family: inherit;
+  width: 100%;
 }
 
 #submit-form input:focus,
@@ -138,4 +139,20 @@ body.submit-page {
 
 #form-message.error {
   color: #e07a7a;
+}
+
+@media (max-width: 480px) {
+  .submit-container {
+    margin: 24px auto;
+    padding: 0 16px 40px;
+  }
+
+  .submit-container h1 {
+    font-size: 22px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
 }

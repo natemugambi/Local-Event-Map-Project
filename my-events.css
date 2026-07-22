@@ -183,7 +183,7 @@ body.my-events-page {
   color: #f0ece4;
   padding: 10px 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px; /* 16px+ prevents iOS Safari from auto-zooming on focus */
   font-family: inherit;
   margin-top: 4px;
 }
@@ -253,3 +253,27 @@ body.my-events-page {
 
 .edit-message.success { color: #6fbf73; }
 .edit-message.error { color: #e07a7a; }
+
+@media (max-width: 480px) {
+  .my-events-container {
+    margin: 24px auto;
+    padding: 0 16px 40px;
+  }
+
+  .my-events-container h1 {
+    font-size: 22px;
+  }
+
+  .modal-card {
+    padding: 20px;
+  }
+
+  .modal-card .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .my-event-card-actions {
+    flex-wrap: wrap;
+  }
+}

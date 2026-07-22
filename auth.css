@@ -77,9 +77,10 @@ body.auth-page {
   color: #f0ece4;
   padding: 12px 14px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px; /* 16px+ prevents iOS Safari from auto-zooming on focus */
   font-family: inherit;
   margin-top: 4px;
+  width: 100%;
 }
 
 .auth-form input:focus {
@@ -155,4 +156,14 @@ body.auth-page {
 
 .auth-redirect-msg.visible {
   display: block;
+}
+
+@media (max-width: 480px) {
+  body.auth-page {
+    padding: 24px 16px;
+  }
+
+  .auth-card {
+    padding: 24px 20px;
+  }
 }
