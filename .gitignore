@@ -1,3 +1,10 @@
 server/.env
 server/node_modules
 server/events.db
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
