@@ -6,6 +6,10 @@
   <title>Submit an Event — The Spot</title>
   <link rel="stylesheet" href="style.css?v=3" />
   <link rel="stylesheet" href="submit.css?v=2" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" />
+  <meta name="theme-color" content="#0d0d0d" />
 </head>
 <body class="submit-page">
 
@@ -76,5 +80,10 @@
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDl6zuRSeRDo8tQXC-iOZWBYBX-2BG_WyM&libraries=places&callback=initGeocoder">
   </script>
 
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
 </body>
 </html>

@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Spot</title>
   <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" />
+  <meta name="theme-color" content="#0d0d0d" />
 </head>
 <body>
 
@@ -53,5 +57,10 @@
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDl6zuRSeRDo8tQXC-iOZWBYBX-2BG_WyM&callback=initMap">
   </script>
 
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
 </body>
 </html>
