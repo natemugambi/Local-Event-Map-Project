@@ -77,6 +77,17 @@ body {
   background: #ddbb5e;
 }
 
+.ig-link {
+  display: flex;
+  align-items: center;
+  color: #888;
+  transition: color 0.2s;
+}
+
+.ig-link:hover {
+  color: #c9a84c;
+}
+
 .nav-username {
   font-size: 13px;
   color: #aaa;
