@@ -1,0 +1,14 @@
+# Security headers for every page, applied by Cloudflare Pages on deploy.
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Content-Security-Policy — the allow-list of where the browser may load things from:
+#   script-src   our own files + Google Maps. No inline scripts, so injected <script> can't run.
+#   style-src    'unsafe-inline' is needed for Google Maps and our inline style="" attributes.
+#   connect-src  our Railway API + Google Maps data requests.
+#   frame-ancestors 'none'  nobody can embed the site in an <iframe> (clickjacking).
+/*
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' https://maps.googleapis.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://local-event-map-project-production.up.railway.app https://*.googleapis.com https://*.google.com https://*.gstatic.com; frame-src https://*.google.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()

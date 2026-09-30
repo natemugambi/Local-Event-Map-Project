@@ -89,10 +89,6 @@
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDl6zuRSeRDo8tQXC-iOZWBYBX-2BG_WyM&libraries=places&callback=initGeocoder">
   </script>
 
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
-    }
-  </script>
+  <script src="register-sw.js"></script>
 </body>
 </html>
