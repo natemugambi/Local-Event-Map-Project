@@ -56,7 +56,7 @@ async function setupNav() {
 
   if (user) {
     navAuth.innerHTML = `
-      <span class="nav-username">Hi, ${user.username}</span>
+      <span class="nav-username">Hi, ${escapeHtml(user.username)}</span>
       <a href="my-events.html" class="nav-login-link">My Events</a>
       <a href="submit.html" class="submit-link">+ Host an Event</a>
       <button class="logout-btn" id="logout-btn">Log Out</button>
@@ -121,6 +121,18 @@ function renderEvents(eventsToRender) {
   }
 
   eventsToRender.forEach(function (event, index) {
+    // Escape every field once up front — event data comes from users/APIs and must never be treated as HTML
+    const safe = {
+      category: escapeHtml(event.category),
+      name: escapeHtml(event.name),
+      date: escapeHtml(event.date),
+      time: escapeHtml(event.time),
+      venue: escapeHtml(event.venue),
+      city: escapeHtml(event.city),
+      url: safeUrl(event.url),
+      id: escapeHtml(event.id),
+    };
+
     // --- MARKER ---
     const marker = new google.maps.Marker({
       position: { lat: event.lat, lng: event.lng },
@@ -140,12 +152,12 @@ function renderEvents(eventsToRender) {
     const infoWindow = new google.maps.InfoWindow({
       content: `
         <div style="background:#1a1a1a; color:#f0ece4; padding:12px 14px; border-radius:8px; min-width:180px; font-family:'Segoe UI',Arial,sans-serif;">
-          <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">${event.category}${event.submitted ? " · Community" : ""}</div>
-          <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${event.name}</div>
-          <div style="font-size:12px; color:#aaa;">📅 ${event.date} · ${event.time}</div>
-          <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${event.venue}, ${event.city}</div>
-          ${event.url ? `<a href="${event.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:8px; background:#c9a84c; color:#0d0d0d; font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; text-decoration:none;">${event.submitted ? "Event Link" : "View Tickets"}</a>` : ""}
-          ${event.submitted ? `<button class="report-btn" data-id="${event.id}" style="margin-top:8px; margin-left:6px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
+          <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">${safe.category}${event.submitted ? " · Community" : ""}</div>
+          <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${safe.name}</div>
+          <div style="font-size:12px; color:#aaa;">📅 ${safe.date} · ${safe.time}</div>
+          <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${safe.venue}, ${safe.city}</div>
+          ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:8px; background:#c9a84c; color:#0d0d0d; font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; text-decoration:none;">${event.submitted ? "Event Link" : "View Tickets"}</a>` : ""}
+          ${event.submitted ? `<button class="report-btn" data-id="${safe.id}" style="margin-top:8px; margin-left:6px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
         </div>
       `,
     });
@@ -158,7 +170,7 @@ function renderEvents(eventsToRender) {
     });
 
     infoWindow.addListener("domready", () => {
-      const btn = document.querySelector(`.report-btn[data-id="${event.id}"]`);
+      const btn = document.querySelector(`.report-btn[data-id="${CSS.escape(String(event.id))}"]`);
       if (btn) btn.addEventListener("click", () => reportEvent(event.id, btn));
     });
 
@@ -170,13 +182,13 @@ function renderEvents(eventsToRender) {
     card.dataset.index = index;
 
     card.innerHTML = `
-      <div class="event-card-category">${event.category}${event.submitted ? " · Community" : ""}</div>
-      <h3>${event.name}</h3>
+      <div class="event-card-category">${safe.category}${event.submitted ? " · Community" : ""}</div>
+      <h3>${safe.name}</h3>
       <div class="event-card-meta">
-        <span><span class="icon">📅</span>${event.date} · ${event.time}</span>
-        <span><span class="icon">📍</span>${event.venue}, ${event.city}</span>
+        <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>
+        <span><span class="icon">📍</span>${safe.venue}, ${safe.city}</span>
       </div>
-      ${event.url ? `<a href="${event.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
+      ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
     `;
 
     card.addEventListener("click", function () {

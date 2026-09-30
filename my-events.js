@@ -48,19 +48,21 @@ async function loadMyEvents() {
       card.className = "my-event-card";
       card.dataset.id = event.id;
 
+      // Escape all event data before it goes into the HTML template
+      const safeLink = safeUrl(event.url);
       card.innerHTML = `
         <div class="my-event-card-header">
-          <div class="my-event-card-category">${event.category}</div>
+          <div class="my-event-card-category">${escapeHtml(event.category)}</div>
         </div>
-        <h3>${event.name}</h3>
+        <h3>${escapeHtml(event.name)}</h3>
         <div class="my-event-card-meta">
-          <span>📅 ${event.date} · ${event.time}</span>
-          <span>📍 ${event.venue}, ${event.city}</span>
-          ${event.url ? `<span>🔗 <a href="${event.url}" target="_blank" style="color:#c9a84c;">${event.url}</a></span>` : ""}
+          <span>📅 ${escapeHtml(event.date)} · ${escapeHtml(event.time)}</span>
+          <span>📍 ${escapeHtml(event.venue)}, ${escapeHtml(event.city)}</span>
+          ${safeLink ? `<span>🔗 <a href="${safeLink}" target="_blank" rel="noopener noreferrer" style="color:#c9a84c;">${safeLink}</a></span>` : ""}
         </div>
         <div class="my-event-card-actions">
-          <button class="btn-edit" data-id="${event.id}">Edit</button>
-          <button class="btn-delete" data-id="${event.id}">Delete</button>
+          <button class="btn-edit" data-id="${escapeHtml(event.id)}">Edit</button>
+          <button class="btn-delete" data-id="${escapeHtml(event.id)}">Delete</button>
         </div>
       `;
 

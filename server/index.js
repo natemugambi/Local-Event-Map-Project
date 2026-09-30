@@ -160,6 +160,10 @@ app.post("/api/submitted-events", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
+  if (url && !isSafeUrl(url)) {
+    return res.status(400).json({ error: "Event link must start with http:// or https://" });
+  }
+
   if (event_date && event_date < new Date().toISOString().slice(0, 10)) {
     return res.status(400).json({ error: "Event date can't be in the past" });
   }
@@ -213,6 +217,10 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
 
   const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
 
+  if (url && !isSafeUrl(url)) {
+    return res.status(400).json({ error: "Event link must start with http:// or https://" });
+  }
+
   await pool.query(
     `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10 WHERE id=$11`,
     [name || event.name, category || event.category, date || event.date, time || event.time,
@@ -232,6 +240,17 @@ app.post("/api/submitted-events/:id/report", async (req, res) => {
 });
 
 // ===== HELPERS =====
+// Event links are rendered as <a href>, so only http(s) is allowed —
+// blocks "javascript:" / "data:" URLs that would run code when clicked.
+function isSafeUrl(value) {
+  try {
+    const parsed = new URL(String(value));
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch (e) {
+    return false;
+  }
+}
+
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split("-");
   const date = new Date(year, month - 1, day);
