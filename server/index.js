@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const { pool, initDB } = require("./db");
 
 const app = express();
@@ -11,6 +12,10 @@ const TM_KEY = process.env.TICKETMASTER_KEY;
 const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
 const DAILY_SUBMISSION_LIMIT = 5; // per user, rolling 24 hours
+const HOURLY_REPORT_LIMIT = 5; // per user and per IP, rolling hour
+
+// Railway sits one proxy hop in front of us — trust it so req.ip is the visitor's real IP
+app.set("trust proxy", 1);
 
 app.use(cors({
   origin: [
@@ -231,11 +236,48 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/api/submitted-events/:id/report", async (req, res) => {
-  await pool.query(
-    `UPDATE submitted_events SET report_count = report_count + 1 WHERE id = $1`,
-    [req.params.id]
+// Per-IP cap on reports, so one person can't hide events by rotating through accounts
+const reportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: HOURLY_REPORT_LIMIT,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many reports. Try again later." },
+});
+
+app.post("/api/submitted-events/:id/report", requireAuth, reportLimiter, async (req, res) => {
+  const eventId = parseInt(req.params.id, 10);
+  if (!Number.isInteger(eventId)) return res.status(400).json({ error: "Invalid event id" });
+
+  const result = await pool.query(`SELECT user_id FROM submitted_events WHERE id = $1`, [eventId]);
+  const event = result.rows[0];
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  if (event.user_id === req.user.userId)
+    return res.status(400).json({ error: "You can't report your own event" });
+
+  // Per-user cap, in case one account switches networks to dodge the IP limit
+  const recent = await pool.query(
+    `SELECT COUNT(*) FROM event_reports
+     WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+    [req.user.userId]
   );
+  if (parseInt(recent.rows[0].count) >= HOURLY_REPORT_LIMIT)
+    return res.status(429).json({ error: "Too many reports. Try again later." });
+
+  // Record the report and bump the count in one statement; a repeat report inserts nothing
+  const inserted = await pool.query(
+    `WITH new_report AS (
+       INSERT INTO event_reports (user_id, event_id) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING
+       RETURNING event_id
+     )
+     UPDATE submitted_events SET report_count = report_count + 1
+     WHERE id IN (SELECT event_id FROM new_report)`,
+    [req.user.userId, eventId]
+  );
+  if (inserted.rowCount === 0)
+    return res.status(409).json({ error: "You've already reported this event" });
+
   res.json({ success: true });
 });
 

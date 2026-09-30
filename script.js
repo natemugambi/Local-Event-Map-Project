@@ -248,11 +248,36 @@ function closeActiveInfoWindow() {
 
 // ===== REPORT EVENT =====
 async function reportEvent(id, btn) {
+  const stored = localStorage.getItem("tg_user");
+  const user = stored ? JSON.parse(stored) : null;
+  if (!user) {
+    // Reporting requires an account — send them to log in and come back
+    window.location.href = "login.html?reason=auth";
+    return;
+  }
+
   btn.disabled = true;
-  btn.textContent = "Reported";
+  btn.textContent = "Reporting...";
   try {
-    await fetch(`${SERVER_URL}/api/submitted-events/${id}/report`, { method: "POST" });
+    const res = await fetch(`${SERVER_URL}/api/submitted-events/${encodeURIComponent(id)}/report`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${user.token}` },
+    });
+
+    if (res.ok || res.status === 409) {
+      btn.textContent = "Reported";
+    } else if (res.status === 401) {
+      // Token expired — clear it and ask them to log in again
+      localStorage.removeItem("tg_user");
+      window.location.href = "login.html?reason=auth";
+    } else {
+      const data = await res.json().catch(() => ({}));
+      btn.textContent = data.error || "Couldn't report";
+      if (res.status !== 429 && res.status !== 400) btn.disabled = false;
+    }
   } catch (error) {
     console.error("Failed to report event:", error);
+    btn.textContent = "Couldn't report";
+    btn.disabled = false;
   }
 }

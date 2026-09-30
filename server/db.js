@@ -39,6 +39,16 @@ async function initDB() {
     ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS event_date DATE
   `);
 
+  // One row per (user, event) report — the primary key stops duplicate reports
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS event_reports (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      event_id INTEGER NOT NULL REFERENCES submitted_events(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      PRIMARY KEY (user_id, event_id)
+    )
+  `);
+
   console.log("Database tables ready");
 }
 
