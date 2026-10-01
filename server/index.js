@@ -18,6 +18,26 @@ const HOURLY_REPORT_LIMIT = 5; // per user and per IP, rolling hour
 // Railway sits one proxy hop in front of us — trust it so req.ip is the visitor's real IP
 app.set("trust proxy", 1);
 
+// Per-IP rate limiter factory — counts requests from one IP over a time window
+function ipLimiter(windowMs, limit, message, options = {}) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { error: message },
+    ...options,
+  });
+}
+
+// Signup: stops one person mass-creating accounts to dodge per-user limits
+const signupLimiter = ipLimiter(60 * 60 * 1000, 5, "Too many accounts created from this network. Try again later.");
+// Login: slows down password guessing
+// (only failed attempts count, so people sharing wifi don't lock each other out)
+const loginLimiter = ipLimiter(15 * 60 * 1000, 10, "Too many login attempts. Try again in a few minutes.", { skipSuccessfulRequests: true });
+// Submissions: backstop on top of the per-user daily limit
+const submitLimiter = ipLimiter(24 * 60 * 60 * 1000, 10, "Too many events submitted from this network today. Try again tomorrow.");
+
 app.use(cors({
   origin: [
     "https://findthespot.net",
@@ -103,10 +123,18 @@ app.get("/api/events", async (req, res) => {
 
 // ===== AUTH =====
 
-app.post("/api/signup", async (req, res) => {
+const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,30}$/;
+
+app.post("/api/signup", signupLimiter, async (req, res) => {
   const { username, email, password } = req.body;
   if (!username || !email || !password)
     return res.status(400).json({ error: "All fields are required" });
+  if (typeof username !== "string" || !USERNAME_PATTERN.test(username))
+    return res.status(400).json({ error: "Username must be 3–30 characters: letters, numbers, _ . or -" });
+  if (typeof email !== "string" || email.length > 254 || !email.includes("@"))
+    return res.status(400).json({ error: "Please enter a valid email" });
+  if (typeof password !== "string" || password.length < 8 || password.length > 72)
+    return res.status(400).json({ error: "Password must be 8–72 characters" });
 
   try {
     const hashed = await bcrypt.hash(password, 10);
@@ -124,9 +152,9 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password)
+  if (typeof username !== "string" || typeof password !== "string" || !username || !password)
     return res.status(400).json({ error: "Username and password are required" });
 
   const result = await pool.query(`SELECT * FROM users WHERE username = $1`, [username]);
@@ -159,7 +187,7 @@ app.get("/api/submitted-events", async (req, res) => {
   res.json(result.rows);
 });
 
-app.post("/api/submitted-events", requireAuth, async (req, res) => {
+app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) => {
   const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
 
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null) {
@@ -238,13 +266,7 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
 });
 
 // Per-IP cap on reports, so one person can't hide events by rotating through accounts
-const reportLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: HOURLY_REPORT_LIMIT,
-  standardHeaders: "draft-8",
-  legacyHeaders: false,
-  message: { error: "Too many reports. Try again later." },
-});
+const reportLimiter = ipLimiter(60 * 60 * 1000, HOURLY_REPORT_LIMIT, "Too many reports. Try again later.");
 
 app.post("/api/submitted-events/:id/report", requireAuth, reportLimiter, async (req, res) => {
   const eventId = parseInt(req.params.id, 10);

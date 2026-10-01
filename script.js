@@ -49,18 +49,54 @@ function initMap() {
 }
 
 // ===== NAV AUTH STATE =====
+// localStorage is only a hint (anyone can edit it in devtools), so we show it
+// immediately to avoid flicker, then ask the server who the token really belongs to.
 async function setupNav() {
-  const navAuth = document.getElementById("nav-auth");
   const stored = localStorage.getItem("tg_user");
-  const user = stored ? JSON.parse(stored) : null;
+  let user = null;
+  try {
+    user = stored ? JSON.parse(stored) : null;
+  } catch {
+    localStorage.removeItem("tg_user");
+  }
 
-  if (user) {
+  if (!user || !user.token) {
+    renderNav(null);
+    return;
+  }
+  renderNav(user.username);
+
+  try {
+    const res = await fetch(`${SERVER_URL}/api/me`, {
+      headers: { "Authorization": `Bearer ${user.token}` },
+    });
+    if (res.status === 401) {
+      // Expired or tampered token — log them out locally
+      localStorage.removeItem("tg_user");
+      renderNav(null);
+    } else if (res.ok) {
+      // Trust the server's (signed) username over whatever is in localStorage
+      const me = await res.json();
+      renderNav(me.username);
+    }
+    // Other failures (server down): keep the optimistic display; API calls still verify the token
+  } catch (error) {
+    console.error("Could not verify login:", error);
+  }
+}
+
+function renderNav(username) {
+  const navAuth = document.getElementById("nav-auth");
+
+  if (username) {
     navAuth.innerHTML = `
-      <span class="nav-username">Hi, ${escapeHtml(user.username)}</span>
+      <span class="nav-username"></span>
       <a href="my-events.html" class="nav-login-link">My Events</a>
       <a href="submit.html" class="submit-link">+ Host an Event</a>
       <button class="logout-btn" id="logout-btn">Log Out</button>
     `;
+    // textContent never interprets HTML, so the username can't inject markup
+    navAuth.querySelector(".nav-username").textContent = `Hi, ${username}`;
     document.getElementById("logout-btn").addEventListener("click", () => {
       localStorage.removeItem("tg_user");
       window.location.reload();

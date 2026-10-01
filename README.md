@@ -76,7 +76,7 @@ Note: the frontend `SERVER_URL` constants point at the production Railway API; f
 - [ ] Migrate Google Maps loading to `loading=async` and `AdvancedMarkerElement` (current usage is deprecated but functional)
 
 **Medium term**
-- [ ] Signup rate limiting per IP (closes the multi-account spam loophole)
+- [x] Signup rate limiting per IP (closes the multi-account spam loophole)
 - [ ] Search box and date filtering on the map page
 - [ ] Event detail pages with shareable links
 - [ ] Email verification / password reset
