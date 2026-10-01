@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const { pool, initDB } = require("./db");
 
 const app = express();
+app.disable("x-powered-by"); // don't advertise that we run Express
 const PORT = process.env.PORT || 3000;
 const TM_KEY = process.env.TICKETMASTER_KEY;
 const JWT_SECRET = process.env.SESSION_SECRET;
@@ -318,6 +319,22 @@ function mapCategory(segment, genre) {
 
   return "Festivals & Entertainment";
 }
+
+// ===== ERROR HANDLING =====
+// Unknown routes get a plain JSON 404 instead of Express's default HTML page
+app.use((req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
+
+// Catch-all for any error a route throws. The real details go to the Railway
+// logs only; visitors get a generic message so nothing about the server leaks.
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Invalid request" });
+  }
+  console.error(`Error on ${req.method} ${req.path}:`, err);
+  res.status(500).json({ error: "Something went wrong. Please try again." });
+});
 
 // ===== START SERVER =====
 async function start() {

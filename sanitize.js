@@ -28,3 +28,12 @@ function safeUrl(value) {
   }
   return "";
 }
+
+// Turn an error into text that's safe to show visitors. Messages we threw
+// ourselves from the server's JSON ({ error: "..." }) pass through; browser
+// network failures ("Failed to fetch") and unexpected responses get a
+// generic message instead, so nothing about the backend leaks.
+function friendlyError(err, fallback = "Something went wrong. Please try again.") {
+  if (!err || err instanceof TypeError || err instanceof SyntaxError) return fallback;
+  return err.message || fallback;
+}

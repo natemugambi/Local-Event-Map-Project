@@ -37,7 +37,7 @@ if (signupForm) {
       showMessage("Account created! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {
-      showMessage(err.message, "error");
+      showMessage(friendlyError(err), "error");
       btn.disabled = false;
       btn.textContent = "Create Account";
     }
@@ -67,7 +67,7 @@ if (loginForm) {
       showMessage("Logged in! Redirecting...", "success");
       setTimeout(() => window.location.href = "index.html", 1200);
     } catch (err) {
-      showMessage(err.message, "error");
+      showMessage(friendlyError(err), "error");
       btn.disabled = false;
       btn.textContent = "Log In";
     }

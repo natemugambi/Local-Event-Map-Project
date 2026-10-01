@@ -73,7 +73,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
     e.target.reset();
     document.getElementById("geocode-status").textContent = "";
   } catch (error) {
-    formMessage.textContent = error.message || "Something went wrong. Please try again.";
+    formMessage.textContent = friendlyError(error);
     formMessage.className = "error";
   } finally {
     submitBtn.disabled = false;

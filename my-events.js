@@ -107,7 +107,7 @@ async function deleteEvent(id, card) {
       }
     }, 300);
   } catch (err) {
-    alert("Failed to delete: " + err.message);
+    alert("Failed to delete: " + friendlyError(err));
   }
 }
 
@@ -175,7 +175,7 @@ editForm.addEventListener("submit", async (e) => {
       loadMyEvents();
     }, 800);
   } catch (err) {
-    editMessage.textContent = err.message;
+    editMessage.textContent = friendlyError(err);
     editMessage.className = "edit-message error";
   }
 });

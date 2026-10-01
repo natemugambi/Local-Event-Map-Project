@@ -102,7 +102,7 @@ async function loadEvents() {
     renderEvents(allEvents);
   } catch (error) {
     console.error("Failed to load events:", error);
-    eventList.innerHTML = `<p style="color:#888; text-align:center; padding: 40px 20px; font-size:14px;">Could not load events. Is the server running?</p>`;
+    eventList.innerHTML = `<p style="color:#888; text-align:center; padding: 40px 20px; font-size:14px;">Events are temporarily unavailable. Please try again shortly.</p>`;
   }
 }
 
