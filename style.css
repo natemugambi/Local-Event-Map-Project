@@ -257,6 +257,50 @@ body {
   font-weight: 600;
 }
 
+/* Category on the left, age badge pinned to the right */
+.event-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.event-card-top .event-card-category {
+  margin-bottom: 0;
+}
+
+/* ===== AGE BADGE ===== */
+.age-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.age-all {
+  color: #5fd38a;
+  background: rgba(95, 211, 138, 0.12);
+  border-color: rgba(95, 211, 138, 0.45);
+}
+
+.age-18 {
+  color: #f0a64a;
+  background: rgba(240, 166, 74, 0.12);
+  border-color: rgba(240, 166, 74, 0.5);
+}
+
+.age-21 {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+  border-color: rgba(255, 107, 107, 0.5);
+}
+
 .event-card h3 {
   font-size: 15px;
   font-weight: 700;

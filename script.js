@@ -188,7 +188,10 @@ function renderEvents(eventsToRender) {
     const infoWindow = new google.maps.InfoWindow({
       content: `
         <div style="background:#1a1a1a; color:#f0ece4; padding:12px 14px; border-radius:8px; min-width:180px; font-family:'Segoe UI',Arial,sans-serif;">
-          <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;">${safe.category}${event.submitted ? " · Community" : ""}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
+            <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em;">${safe.category}${event.submitted ? " · Community" : ""}</div>
+            ${ageBadge(event.age_restriction)}
+          </div>
           <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${safe.name}</div>
           <div style="font-size:12px; color:#aaa;">📅 ${safe.date} · ${safe.time}</div>
           <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${safe.venue}, ${safe.city}</div>
@@ -218,7 +221,10 @@ function renderEvents(eventsToRender) {
     card.dataset.index = index;
 
     card.innerHTML = `
-      <div class="event-card-category">${safe.category}${event.submitted ? " · Community" : ""}</div>
+      <div class="event-card-top">
+        <div class="event-card-category">${safe.category}${event.submitted ? " · Community" : ""}</div>
+        ${ageBadge(event.age_restriction)}
+      </div>
       <h3>${safe.name}</h3>
       <div class="event-card-meta">
         <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>

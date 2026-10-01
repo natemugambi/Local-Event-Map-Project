@@ -14,6 +14,7 @@ const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
 const DAILY_SUBMISSION_LIMIT = 5; // per user, rolling 24 hours
 const HOURLY_REPORT_LIMIT = 5; // per user and per IP, rolling hour
+const AGE_OPTIONS = ["All Ages", "18+", "21+"];
 
 // Railway sits one proxy hop in front of us — trust it so req.ip is the visitor's real IP
 app.set("trust proxy", 1);
@@ -111,6 +112,7 @@ app.get("/api/events", async (req, res) => {
           lat: parseFloat(venue.location.latitude),
           lng: parseFloat(venue.location.longitude),
           url: e.url,
+          age_restriction: ticketmasterAgeRestriction(e),
         };
       });
 
@@ -188,10 +190,14 @@ app.get("/api/submitted-events", async (req, res) => {
 });
 
 app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) => {
-  const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction } = req.body;
 
-  if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null) {
+  if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null || !age_restriction) {
     return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!AGE_OPTIONS.includes(age_restriction)) {
+    return res.status(400).json({ error: "Age restriction must be All Ages, 18+ or 21+" });
   }
 
   if (url && !isSafeUrl(url)) {
@@ -215,9 +221,9 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
   }
 
   const result = await pool.query(
-    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null]
+    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date, age_restriction)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null, age_restriction]
   );
 
   res.status(201).json({ id: result.rows[0].id });
@@ -249,17 +255,22 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only edit your own events" });
 
-  const { name, category, date, time, city, venue, lat, lng, url, event_date } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction } = req.body;
 
   if (url && !isSafeUrl(url)) {
     return res.status(400).json({ error: "Event link must start with http:// or https://" });
   }
 
+  if (age_restriction !== undefined && !AGE_OPTIONS.includes(age_restriction)) {
+    return res.status(400).json({ error: "Age restriction must be All Ages, 18+ or 21+" });
+  }
+
   await pool.query(
-    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10 WHERE id=$11`,
+    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10, age_restriction=$11 WHERE id=$12`,
     [name || event.name, category || event.category, date || event.date, time || event.time,
      city || event.city, venue || event.venue, lat || event.lat, lng || event.lng,
-     url !== undefined ? url : event.url, event_date || event.event_date, req.params.id]
+     url !== undefined ? url : event.url, event_date || event.event_date,
+     age_restriction || event.age_restriction, req.params.id]
   );
 
   res.json({ success: true });
@@ -305,6 +316,26 @@ app.post("/api/submitted-events/:id/report", requireAuth, reportLimiter, async (
 });
 
 // ===== HELPERS =====
+// Ticketmaster's structured ageRestrictions field is almost always empty, but the
+// event's own text often says "21+" or "This event is 21 and over". Venues also
+// paste generic legal text ("For any event that is 18 or 21 and over...") onto
+// every event, so those sentences are dropped before looking for an age.
+const AGE_BOILERPLATE = /\b(any (event|show|ticket)|listed as|from time to time)\b/i;
+const AGE_21 = /\b21\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
+const AGE_18 = /\b18\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
+
+function ticketmasterAgeRestriction(e) {
+  const text = [e.name, e.ageRestrictions?.ageRuleDescription, e.info, e.pleaseNote].filter(Boolean).join(". ");
+  const specific = text
+    .split(/[.!?\n]+/)
+    .filter(sentence => !AGE_BOILERPLATE.test(sentence))
+    .join(". ");
+
+  if (AGE_21.test(specific)) return "21+";
+  if (AGE_18.test(specific)) return "18+";
+  return "All Ages";
+}
+
 // Event links are rendered as <a href>, so only http(s) is allowed —
 // blocks "javascript:" / "data:" URLs that would run code when clicked.
 function isSafeUrl(value) {

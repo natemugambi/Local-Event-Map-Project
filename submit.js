@@ -42,6 +42,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
     const payload = {
       name: formData.get("name"),
       category: formData.get("category"),
+      age_restriction: formData.get("age_restriction"),
       date: formatDate(formData.get("date")),
       event_date: formData.get("date"),
       time: formatTime(formData.get("time")),

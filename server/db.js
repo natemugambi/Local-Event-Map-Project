@@ -39,6 +39,11 @@ async function initDB() {
     ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS event_date DATE
   `);
 
+  // "All Ages", "18+" or "21+" — existing rows default to All Ages
+  await pool.query(`
+    ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS age_restriction TEXT NOT NULL DEFAULT 'All Ages'
+  `);
+
   // One row per (user, event) report — the primary key stops duplicate reports
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_reports (

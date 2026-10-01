@@ -53,6 +53,7 @@ async function loadMyEvents() {
       card.innerHTML = `
         <div class="my-event-card-header">
           <div class="my-event-card-category">${escapeHtml(event.category)}</div>
+          ${ageBadge(event.age_restriction)}
         </div>
         <h3>${escapeHtml(event.name)}</h3>
         <div class="my-event-card-meta">
@@ -121,6 +122,7 @@ function openEditModal(event) {
   document.getElementById("edit-id").value = event.id;
   document.getElementById("edit-name").value = event.name;
   document.getElementById("edit-category").value = event.category;
+  document.getElementById("edit-age").value = event.age_restriction || "All Ages";
   // Date picker needs ISO format (YYYY-MM-DD); pg returns event_date as an ISO timestamp string
   document.getElementById("edit-date").value = event.event_date ? event.event_date.slice(0, 10) : "";
   document.getElementById("edit-time").value = event.time;
@@ -148,6 +150,7 @@ editForm.addEventListener("submit", async (e) => {
   const payload = {
     name: document.getElementById("edit-name").value,
     category: document.getElementById("edit-category").value,
+    age_restriction: document.getElementById("edit-age").value,
     date: formatDate(isoDate),
     event_date: isoDate,
     time: document.getElementById("edit-time").value,
