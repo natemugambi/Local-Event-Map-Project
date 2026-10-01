@@ -301,6 +301,14 @@ body {
   border-color: rgba(255, 107, 107, 0.5);
 }
 
+/* No age stated by the event — deliberately quiet so real ages stand out */
+.age-unknown {
+  color: #8a8a8a;
+  background: transparent;
+  border-color: #3a3a3a;
+  font-weight: 600;
+}
+
 .event-card h3 {
   font-size: 15px;
   font-weight: 700;

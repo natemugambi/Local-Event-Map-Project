@@ -320,9 +320,11 @@ app.post("/api/submitted-events/:id/report", requireAuth, reportLimiter, async (
 // event's own text often says "21+" or "This event is 21 and over". Venues also
 // paste generic legal text ("For any event that is 18 or 21 and over...") onto
 // every event, so those sentences are dropped before looking for an age.
+// Returns null when the event doesn't state an age — we don't assume "All Ages".
 const AGE_BOILERPLATE = /\b(any (event|show|ticket)|listed as|from time to time)\b/i;
 const AGE_21 = /\b21\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
 const AGE_18 = /\b18\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
+const AGE_ALL = /\ball[- ]ages\b/i;
 
 function ticketmasterAgeRestriction(e) {
   const text = [e.name, e.ageRestrictions?.ageRuleDescription, e.info, e.pleaseNote].filter(Boolean).join(". ");
@@ -333,7 +335,8 @@ function ticketmasterAgeRestriction(e) {
 
   if (AGE_21.test(specific)) return "21+";
   if (AGE_18.test(specific)) return "18+";
-  return "All Ages";
+  if (AGE_ALL.test(specific)) return "All Ages";
+  return null;
 }
 
 // Event links are rendered as <a href>, so only http(s) is allowed —

@@ -38,11 +38,12 @@ function friendlyError(err, fallback = "Something went wrong. Please try again."
   return err.message || fallback;
 }
 
-// Colored age pill for cards and popups. Only one of three fixed values is
-// ever rendered, so this is safe to put in HTML; unknown values show "All Ages".
+// Colored age pill for cards and popups. Only fixed strings are ever rendered,
+// so this is safe to put in HTML. Events that don't state an age get a neutral
+// "Check venue" pill rather than an assumed "All Ages".
 const AGE_BADGE_CLASSES = { "All Ages": "age-all", "18+": "age-18", "21+": "age-21" };
 
 function ageBadge(value) {
-  const label = AGE_BADGE_CLASSES[value] ? value : "All Ages";
-  return `<span class="age-badge ${AGE_BADGE_CLASSES[label]}">${label}</span>`;
+  if (!AGE_BADGE_CLASSES[value]) return `<span class="age-badge age-unknown">Check venue</span>`;
+  return `<span class="age-badge ${AGE_BADGE_CLASSES[value]}">${value}</span>`;
 }
