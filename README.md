@@ -70,20 +70,6 @@ Note: the frontend `SERVER_URL` constants point at the production Railway API; f
 
 ## Roadmap
 
-**Near term (launch readiness)**
-- [ ] Finalize the app name and buy a matching custom domain (also sidesteps the Safe Browsing false-positive on the Netlify subdomain)
-- [ ] Favicon + general polish (loading states, mobile pass)
-- [ ] Migrate Google Maps loading to `loading=async` and `AdvancedMarkerElement` (current usage is deprecated but functional)
-
-**Medium term**
-- [x] Signup rate limiting per IP (closes the multi-account spam loophole)
-- [ ] Search box and date filtering on the map page
-- [ ] Event detail pages with shareable links
-- [ ] Email verification / password reset
-
-**Longer term**
-- [ ] Organizer profiles and follower notifications
-- [ ] More data sources for small events (partnerships with local promoters)
-- [ ] Expansion beyond the Bay Area
+Goals, upcoming work and what's shipped live in [GOALS.md](GOALS.md).
 
 See [DEVLOG.md](DEVLOG.md) for the full history of technical and product decisions.

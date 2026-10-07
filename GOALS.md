@@ -1,0 +1,55 @@
+# The Spot — Goals
+
+The single list of where The Spot is headed. Check items off as they ship; add new ones as they come up.
+For *how* past decisions were made, see [DEVLOG.md](DEVLOG.md).
+
+**Mission:** the go-to map for Black-centered events in the Bay Area, built for a 20s / college-age crowd —
+open it, see what's happening tonight, know if you can get in.
+
+---
+
+## Now
+
+- [ ] **Site changes** (next batch — list them here as they're decided)
+- [ ] **Mobile-friendliness pass** — every page comfortable on a phone (map + list layout, popups, forms, tap targets)
+- [ ] **App version** — The Spot is already installable as a PWA; decide whether to polish that or wrap it as a store app
+
+## Next (launch polish)
+
+- [ ] Loading states and general polish across pages
+- [ ] Migrate Google Maps loading to `loading=async` and `AdvancedMarkerElement` (current usage is deprecated but still works)
+- [ ] Search box and date filtering on the map page
+- [ ] Event detail pages with shareable links
+- [ ] Email verification / password reset
+
+## Growth
+
+- [ ] Drive initial traffic — Instagram [@blackbayeventsz](https://www.instagram.com/blackbayeventsz/) linking to findthespot.net
+- [ ] Get local organizers and promoters posting their own events (nightlife, cookouts, pop-ups), not just Ticketmaster pulls
+
+## Later
+
+- [ ] Organizer profiles and follower notifications
+- [ ] More data sources for small events (partnerships with local promoters)
+- [ ] Expansion beyond the Bay Area
+
+## Security follow-ups (optional — do when needed)
+
+- [ ] Cloudflare Turnstile (invisible CAPTCHA) on signup — only if junk signups show up despite the rate limits
+- [ ] Turn on HSTS in Cloudflare (SSL/TLS → Edge Certificates) once HTTPS is confirmed everywhere, including `www`
+- [ ] Put the API behind Cloudflare (`api.findthespot.net`) so WAF and rate-limit rules protect the backend too
+- [ ] Move rate-limit counters into the database if the backend ever runs on more than one server
+- [ ] Delete unused `api.js`
+
+---
+
+## Done
+
+- [x] Age restrictions on events — All Ages / 18+ / 21+ badges; Ticketmaster events show "Check venue" unless their listing states an age (Oct 2026)
+- [x] Security audit fixes, issues #2–#7: XSS escaping, report-abuse protection, security headers/CSP, generic error messages, server-verified login display, per-IP rate limits + signup validation (Sept–Oct 2026)
+- [x] Custom domain findthespot.net on Cloudflare Pages (Sept 2026)
+- [x] Installable as a PWA, app icons, favicon, Instagram link in navbar (Sept 2026)
+- [x] First mobile responsiveness pass (Sept 2026)
+- [x] Ticket / event links on map cards and popups
+- [x] Signup rate limiting per IP (closes the multi-account spam loophole)
+- [x] Core app: Ticketmaster events, community submissions, accounts, My Events edit/delete, report auto-hide, auto-expiry of past events
