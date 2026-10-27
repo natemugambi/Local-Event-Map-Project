@@ -33,6 +33,14 @@ open it, see what's happening tonight, know if you can get in.
 - [ ] More data sources for small events (partnerships with local promoters)
 - [ ] Expansion beyond the Bay Area
 
+## User account security — setup to finish
+
+The code is live; these two steps (done by you in dashboards) switch on the email features.
+
+- [ ] **Resend:** create an account, add + verify the `findthespot.net` domain (Resend shows DNS records to add in Cloudflare → DNS), create an API key, and add it in Railway → Variables as `RESEND_API_KEY`. Turns on password reset and email verification.
+- [ ] **privacy@findthespot.net:** Cloudflare → Email → Email Routing → forward `privacy@findthespot.net` to your inbox (it's the contact address on the Privacy Policy)
+- [ ] Have someone qualified review the Privacy Policy before the app-store launch
+
 ## Security follow-ups (optional — do when needed)
 
 - [ ] Cloudflare Turnstile (invisible CAPTCHA) on signup — only if junk signups show up despite the rate limits
@@ -45,6 +53,7 @@ open it, see what's happening tonight, know if you can get in.
 
 ## Done
 
+- [x] User account security: case-insensitive usernames/emails, event list no longer exposes account IDs, change password, log out everywhere, password reset, email verification, account deletion, Privacy Policy page (Oct 2026)
 - [x] Age restrictions on events — All Ages / 18+ / 21+ badges; Ticketmaster events show "Check venue" unless their listing states an age (Oct 2026)
 - [x] Security audit fixes, issues #2–#7: XSS escaping, report-abuse protection, security headers/CSP, generic error messages, server-verified login display, per-IP rate limits + signup validation (Sept–Oct 2026)
 - [x] Custom domain findthespot.net on Cloudflare Pages (Sept 2026)

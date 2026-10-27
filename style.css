@@ -191,6 +191,22 @@ body {
   padding: 12px 16px;
 }
 
+#panel-footer {
+  padding: 8px 20px;
+  border-top: 1px solid #222;
+  font-size: 11px;
+  text-align: center;
+}
+
+#panel-footer a {
+  color: #666;
+  text-decoration: none;
+}
+
+#panel-footer a:hover {
+  color: #c9a84c;
+}
+
 #event-list::-webkit-scrollbar {
   width: 5px;
 }

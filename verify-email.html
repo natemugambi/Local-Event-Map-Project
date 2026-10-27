@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm Email — The Spot</title>
+  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="auth.css?v=3" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" />
+  <meta name="theme-color" content="#0d0d0d" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-container">
+    <div class="auth-logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">The <span>Spot</span></span>
+    </div>
+
+    <div class="auth-card" id="verify-card">
+      <h2>Confirming your email…</h2>
+      <p class="auth-message" id="verify-result"></p>
+    </div>
+
+    <p class="auth-switch"><a href="index.html">Go to the Map</a> · <a href="account.html">Account</a></p>
+  </div>
+
+  <script src="sanitize.js?v=5"></script>
+  <script src="auth.js?v=4"></script>
+  <script src="register-sw.js"></script>
+</body>
+</html>

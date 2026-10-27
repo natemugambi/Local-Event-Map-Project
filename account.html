@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account — The Spot</title>
+  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="auth.css?v=3" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" />
+  <meta name="theme-color" content="#0d0d0d" />
+</head>
+<body class="auth-page">
+
+  <div class="auth-container">
+    <div class="auth-logo">
+      <span class="logo-icon">✦</span>
+      <span class="logo-text">The <span>Spot</span></span>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="auth-card">
+      <h2>Your account</h2>
+      <p class="auth-subtitle">Manage your login and data.</p>
+      <dl class="account-details">
+        <dt>Username</dt><dd id="account-username">…</dd>
+        <dt>Email</dt><dd id="account-email">…</dd>
+      </dl>
+      <div class="account-verify" id="verify-banner" hidden>
+        <p>Please confirm your email to post events. Check your inbox for the link.</p>
+        <button type="button" class="auth-btn auth-btn-secondary" id="resend-btn">Resend link</button>
+        <p class="auth-message" id="verify-message"></p>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD -->
+    <div class="auth-card">
+      <h2>Change password</h2>
+      <p class="auth-subtitle">This also logs you out on every other device.</p>
+      <form class="auth-form" id="password-form">
+        <label for="current-password">Current password</label>
+        <input type="password" id="current-password" required autocomplete="current-password" />
+
+        <label for="new-password">New password</label>
+        <input type="password" id="new-password" required minlength="8" maxlength="72" autocomplete="new-password" placeholder="At least 8 characters" />
+
+        <button type="submit" class="auth-btn" id="password-btn">Update Password</button>
+        <p class="auth-message" id="password-message"></p>
+      </form>
+    </div>
+
+    <!-- LOG OUT EVERYWHERE -->
+    <div class="auth-card">
+      <h2>Log out everywhere</h2>
+      <p class="auth-subtitle">Signs you out on every phone and computer, including this one. Use this if you think someone else has access to your account.</p>
+      <button type="button" class="auth-btn auth-btn-secondary" id="logout-all-btn">Log Out Everywhere</button>
+      <p class="auth-message" id="logout-all-message"></p>
+    </div>
+
+    <!-- DELETE ACCOUNT -->
+    <div class="auth-card auth-card-danger">
+      <h2>Delete account</h2>
+      <p class="auth-subtitle">Permanently deletes your account and every event you've posted. This can't be undone.</p>
+      <form class="auth-form" id="delete-form">
+        <label for="delete-password">Enter your password to confirm</label>
+        <input type="password" id="delete-password" required autocomplete="current-password" />
+
+        <button type="submit" class="auth-btn auth-btn-danger" id="delete-btn">Delete My Account</button>
+        <p class="auth-message" id="delete-message"></p>
+      </form>
+    </div>
+
+    <p class="auth-switch"><a href="my-events.html">My Events</a> · <a href="index.html">Back to Map</a> · <a href="privacy.html">Privacy</a></p>
+  </div>
+
+  <script src="sanitize.js?v=5"></script>
+  <script src="account.js?v=1"></script>
+  <script src="register-sw.js"></script>
+</body>
+</html>

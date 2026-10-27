@@ -44,6 +44,39 @@ async function initDB() {
     ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS age_restriction TEXT NOT NULL DEFAULT 'All Ages'
   `);
 
+  // Bumped to sign out every device at once (log out everywhere, password change)
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0
+  `);
+
+  // Usernames and emails are unique regardless of capitalization ("Nate" = "nate").
+  // If old accounts already collide, the index can't be built — log it and rely on
+  // the signup check in index.js instead of crashing the server.
+  for (const [name, column] of [["users_username_lower_idx", "username"], ["users_email_lower_idx", "email"]]) {
+    try {
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS ${name} ON users (LOWER(${column}))`);
+    } catch (err) {
+      console.warn(`Could not create ${name} (existing accounts differ only by capitalization):`, err.message);
+    }
+  }
+
+  // Set once the user clicks the link in their verification (or password reset) email
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false
+  `);
+
+  // Single-use links for password reset and email verification. Only a SHA-256
+  // hash of each link's token is stored, so a database leak can't be used to reset passwords.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      purpose TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // One row per (user, event) report — the primary key stops duplicate reports
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_reports (

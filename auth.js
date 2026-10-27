@@ -10,7 +10,7 @@ function showMessage(text, type) {
 // Show redirect message if coming from a protected page
 const redirectMsg = document.getElementById("redirect-msg");
 if (redirectMsg && new URLSearchParams(window.location.search).get("reason") === "auth") {
-  redirectMsg.textContent = "You need to be logged in to submit an event.";
+  redirectMsg.textContent = "Please log in to continue.";
   redirectMsg.classList.add("visible");
 }
 
@@ -72,4 +72,93 @@ if (loginForm) {
       btn.textContent = "Log In";
     }
   });
+}
+
+
+// ===== FORGOT / RESET PASSWORD =====
+// reset-password.html shows the email form normally, and the new-password form
+// when opened from the emailed link (?token=...)
+const resetToken = new URLSearchParams(window.location.search).get("token");
+if (resetToken) {
+  // Remove the one-time code from the address bar and browser history
+  history.replaceState(null, "", window.location.pathname);
+}
+
+const forgotForm = document.getElementById("forgot-form");
+if (forgotForm && resetToken) {
+  document.getElementById("forgot-card").hidden = true;
+  document.getElementById("reset-card").hidden = false;
+}
+
+if (forgotForm) {
+  forgotForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("forgot-btn");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${SERVER_URL}/api/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: document.getElementById("email").value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      // Same message whether or not the email has an account
+      showMessage("If an account uses that email, a reset link is on its way. Check your inbox and spam folder.", "success");
+    } catch (err) {
+      showMessage(friendlyError(err), "error");
+      btn.disabled = false;
+    }
+  });
+}
+
+const resetForm = document.getElementById("reset-form");
+if (resetForm) {
+  resetForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("reset-btn");
+    const message = document.getElementById("reset-message");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${SERVER_URL}/api/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, password: document.getElementById("password").value }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      localStorage.removeItem("tg_user");
+      message.textContent = "Password updated! Taking you to log in...";
+      message.className = "auth-message success";
+      setTimeout(() => window.location.href = "login.html", 1500);
+    } catch (err) {
+      message.textContent = friendlyError(err);
+      message.className = "auth-message error";
+      btn.disabled = false;
+    }
+  });
+}
+
+// ===== VERIFY EMAIL =====
+const verifyResult = document.getElementById("verify-result");
+if (verifyResult) {
+  (async () => {
+    const heading = document.querySelector("#verify-card h2");
+    try {
+      const res = await fetch(`${SERVER_URL}/api/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      heading.textContent = "Email confirmed ✓";
+      verifyResult.textContent = "You're all set — you can now post events.";
+      verifyResult.className = "auth-message success";
+    } catch (err) {
+      heading.textContent = "Couldn't confirm your email";
+      verifyResult.textContent = friendlyError(err);
+      verifyResult.className = "auth-message error";
+    }
+  })();
 }

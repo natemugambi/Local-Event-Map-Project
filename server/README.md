@@ -16,6 +16,9 @@ Requires a `.env` file in this folder (never committed — see `.gitignore`):
 | `TICKETMASTER_KEY` | Ticketmaster Discovery API consumer key |
 | `SESSION_SECRET` | Secret used to sign JWT tokens |
 | `DATABASE_URL` | PostgreSQL connection string (Railway provides this in production) |
+| `RESEND_API_KEY` | *Optional.* Resend API key for password-reset and email-verification emails. While unset, those emails are skipped and email verification isn't enforced. |
+| `EMAIL_FROM` | *Optional.* Sender address, default `The Spot <no-reply@findthespot.net>` (the domain must be verified in Resend) |
+| `SITE_URL` | *Optional.* Base URL used in email links, default `https://findthespot.net` |
 | `PORT` | Optional, defaults to 3000 |
 
 In production these are set as Railway service variables, not a `.env` file.
