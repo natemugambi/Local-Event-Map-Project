@@ -1,7 +1,7 @@
 // ===== EVENT COLLECTOR =====
 // Pulls events from every source every 30 minutes, removes duplicates, and keeps
 // the result in memory so the map loads with one fast request.
-const { BAY_AREA, displayDate, displayTime, todayLocal } = require("./shared");
+const { BAY_AREA, displayDate, displayTime, todayLocal, cleanName } = require("./shared");
 const { resetLookupBudget } = require("./geocode");
 const { fetchTicketmaster } = require("./ticketmaster");
 const { fetchSeatGeek } = require("./seatgeek");
@@ -70,7 +70,12 @@ function removeDuplicates(list) {
     event.tokens = nameTokens(event.name);
     const original = kept.find(k => isDuplicate(k, event));
     if (!original) kept.push(event);
-    else if (!original.age_restriction && event.age_restriction) original.age_restriction = event.age_restriction;
+    else {
+      // Fill gaps in the kept copy from the duplicate (age, photo, price)
+      for (const field of ["age_restriction", "image", "price_min"]) {
+        if (original[field] == null && event[field] != null) original[field] = event[field];
+      }
+    }
   }
   return kept;
 }
@@ -78,7 +83,7 @@ function removeDuplicates(list) {
 // Shape sent to the browser
 function toPublic(e) {
   return {
-    name: String(e.name).slice(0, 200),
+    name: cleanName(e.name).slice(0, 200),
     category: e.category,
     date: displayDate(e.ymd),
     time: e.hm ? displayTime(e.hm) : "Time TBA",
@@ -89,6 +94,8 @@ function toPublic(e) {
     lng: e.lng,
     url: e.url || null,
     age_restriction: e.age_restriction,
+    image: e.image || null,
+    price_min: Number.isFinite(e.price_min) && e.price_min > 0 ? Math.round(e.price_min) : null,
     source: e.source,
   };
 }

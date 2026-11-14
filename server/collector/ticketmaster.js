@@ -1,5 +1,5 @@
 // Ticketmaster Discovery API — searched by keyword within 30 miles of SF.
-const { BAY_AREA, fetchJson, parseAgeRestriction, sleep } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, sleep, safeImage } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const TM_KEY = process.env.TICKETMASTER_KEY;
@@ -14,6 +14,14 @@ function mapCategory(segment, genre) {
   if (comedySegments.includes(genre) || segment === "Arts & Theatre") return "Comedy & Arts";
   if (segment === "Sports") return "Community Gatherings";
   return "Festivals & Entertainment";
+}
+
+// Ticketmaster sends the same photo in many sizes — pick a wide one about 640px across
+function pickImage(images = []) {
+  const wide = images.filter(i => i.ratio === "16_9" && !i.fallback);
+  const pool = wide.length ? wide : images.filter(i => !i.fallback);
+  const best = pool.sort((a, b) => Math.abs(a.width - 640) - Math.abs(b.width - 640))[0];
+  return best ? safeImage(best.url) : null;
 }
 
 async function fetchTicketmaster() {
@@ -45,6 +53,8 @@ async function fetchTicketmaster() {
         lng: parseFloat(venue.location.longitude),
         url: e.url,
         age_restriction: parseAgeRestriction([e.name, e.ageRestrictions?.ageRuleDescription, e.info, e.pleaseNote]),
+        image: pickImage(e.images),
+        price_min: e.priceRanges?.find(p => p.currency === "USD")?.min ?? null,
       });
     }
   }

@@ -75,6 +75,25 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Fetch JSON with a timeout so one slow site can't hold up the whole refresh.
 // 429 means "too many requests" — wait and try again (up to 3 tries).
+// Ticket sites tack notes onto event names: "Rhye (6 and Over)", "YG (18+) (Rescheduled
+// from 10/31/2026)". The age is already pulled out into its own badge, so drop the clutter.
+const NAME_NOISE = /\s*[([](?:\d+\s*(?:and|&|\+)?\s*(?:over|up|older)|\d+\+|all ages|ages? \d+\+?|rescheduled[^)\]]*|postponed[^)\]]*|new date[^)\]]*|moved to[^)\]]*)[)\]]/gi;
+
+function cleanName(name) {
+  const cleaned = String(name || "").replace(NAME_NOISE, "").replace(/\s{2,}/g, " ").trim();
+  return cleaned || String(name || "").trim();
+}
+
+// Only https image links make it to the site
+function safeImage(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchJson(url, options = {}) {
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
@@ -95,5 +114,5 @@ async function fetchText(url) {
 
 module.exports = {
   BAY_AREA, USER_AGENT, displayDate, displayTime, toLocalParts, todayLocal,
-  parseAgeRestriction, isRelevant, fetchJson, fetchText, sleep,
+  parseAgeRestriction, isRelevant, fetchJson, fetchText, sleep, cleanName, safeImage,
 };

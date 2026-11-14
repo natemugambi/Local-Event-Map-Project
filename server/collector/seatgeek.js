@@ -1,6 +1,6 @@
 // SeatGeek Platform API — searched by keyword within 30 miles of SF.
 // Switches on when SEATGEEK_CLIENT_ID is set in Railway.
-const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal, sleep } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal, sleep, safeImage } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
@@ -49,6 +49,8 @@ async function fetchSeatGeek() {
         lng: loc.lon,
         url: e.url,
         age_restriction: parseAgeRestriction([e.title, e.description]),
+        image: safeImage((e.performers || []).find(p => p.primary)?.image || e.performers?.[0]?.image),
+        price_min: e.stats?.lowest_price ?? null,
       });
     }
   }
