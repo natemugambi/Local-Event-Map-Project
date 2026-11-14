@@ -5,9 +5,21 @@ let map;
 let markers = [];
 let areaCircles = []; // shaded areas for approximate-location events
 let activeCard = null;
-let activeInfoWindow = null;
+let infoWindow = null;     // one shared popup, moved to whichever event is open
+let clusterer = null;      // groups nearby pins into numbered circles
+let hoverRing = null;      // ring shown on the map while hovering a card
 let currentFilter = "All";
 let allEvents = [];
+
+// One color per category — used for pins, the legend, card labels and photo placeholders
+const CATEGORY_COLORS = {
+  "Hip-Hop & Rap": "#c9a84c",
+  "R&B & Soul": "#e0708f",
+  "Festivals & Entertainment": "#3fb6a8",
+  "Comedy & Arts": "#9b7be0",
+  "Community Gatherings": "#5b9bd5",
+};
+const categoryColor = category => CATEGORY_COLORS[category] || "#c9a84c";
 
 // ===== INIT MAP =====
 function initMap() {
@@ -33,8 +45,28 @@ function initMap() {
       { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#333333" }] },
       { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
       { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+      // Hide Google's own icons (stores, parks, attractions, transit, highway shields)
+      // so event pins are the only colorful things on the map
+      { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
+      { featureType: "poi.business", stylers: [{ visibility: "off" }] },
+      { featureType: "transit", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+      { featureType: "road", elementType: "labels.icon", stylers: [{ visibility: "off" }] },
     ],
   });
+
+  infoWindow = new google.maps.InfoWindow({ pixelOffset: new google.maps.Size(0, -12) });
+  hoverRing = new google.maps.Marker({
+    clickable: false,
+    zIndex: 9999,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 18, fillOpacity: 0, strokeColor: "#ffffff", strokeWeight: 3 },
+  });
+  clusterer = new markerClusterer.MarkerClusterer({
+    map,
+    // Stop grouping once zoomed in to street level
+    algorithm: new markerClusterer.SuperClusterAlgorithm({ radius: 60, maxZoom: 14 }),
+    renderer: { render: renderCluster },
+  });
+  addLegend();
 
   setupFilters();
   loadEvents();
@@ -128,7 +160,7 @@ async function loadEvents() {
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    });
+    }).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
     renderEvents(allEvents);
   } catch (error) {
@@ -137,21 +169,119 @@ async function loadEvents() {
   }
 }
 
+// ===== DATES =====
+// "YYYY-MM-DD" for today in the Bay Area, whatever the visitor's own time zone
+function todayYmd() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles" }).format(new Date());
+}
+
+// Collected events carry "start" ("2026-11-20T20:00"); community events carry event_date
+function eventYmd(event) {
+  const raw = event.start || event.event_date || "";
+  return /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null;
+}
+
+// "8:00 PM" -> "20:00", so community events sort among collected ones
+function eventHm(event) {
+  if (event.start && event.start.length > 10) return event.start.slice(11, 16);
+  const m = String(event.time || "").match(/(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m/i);
+  if (!m) return "99:99"; // unknown times go last in their day
+  const h = (Number(m[1]) % 12) + (m[3].toLowerCase() === "p" ? 12 : 0);
+  return `${String(h).padStart(2, "0")}:${m[2] || "00"}`;
+}
+
+const sortKey = event => `${eventYmd(event) || "9999-99-99"}T${eventHm(event)}`;
+
+const dayNumber = ymd => Math.round(Date.parse(`${ymd}T12:00:00Z`) / 86400000);
+const weekday = ymd => new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0 = Sunday
+
+// Which heading an event goes under in the list
+function dateGroup(ymd, today) {
+  if (!ymd) return "Date TBA";
+  const daysAway = dayNumber(ymd) - dayNumber(today);
+  const toNextMonday = ((8 - weekday(today)) % 7) || 7;
+  if (daysAway <= 0) return "Today";
+  if (daysAway === 1) return "Tomorrow";
+  if (daysAway < toNextMonday) return [5, 6, 0].includes(weekday(ymd)) ? "This Weekend" : "This Week";
+  if (daysAway < toNextMonday + 7) return "Next Week";
+  if (ymd.slice(0, 7) === today.slice(0, 7)) {
+    return `Later in ${new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", timeZone: "UTC" })}`;
+  }
+  return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+// ===== MAP PIECES =====
+function pinIcon(color, approximate) {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    scale: 9,
+    fillColor: color,
+    fillOpacity: approximate ? 0.35 : 1, // faded pin = approximate area
+    strokeColor: "#0d0d0d",
+    strokeWeight: 2,
+  };
+}
+
+// Numbered circle standing in for a group of nearby pins
+function renderCluster({ count, position }) {
+  return new google.maps.Marker({
+    position,
+    zIndex: 1000 + count,
+    label: { text: String(count), color: "#0d0d0d", fontSize: "12px", fontWeight: "700" },
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 14 + Math.min(count, 30) / 3,
+      fillColor: "#f0ece4",
+      fillOpacity: 0.95,
+      strokeColor: "#c9a84c",
+      strokeOpacity: 0.6,
+      strokeWeight: 6,
+    },
+  });
+}
+
+// Color key in the corner of the map. Built with textContent — no HTML strings.
+function addLegend() {
+  const legend = document.createElement("div");
+  legend.className = "map-legend";
+  for (const [category, color] of Object.entries(CATEGORY_COLORS)) {
+    const row = document.createElement("div");
+    const dot = document.createElement("span");
+    dot.className = "legend-dot";
+    dot.style.background = color;
+    row.append(dot, document.createTextNode(category));
+    legend.appendChild(row);
+  }
+  map.controls[google.maps.ControlPosition.LEFT_BOTTOM].push(legend);
+}
+
+// Placeholder shown when an event has no photo (or the photo fails to load)
+function photoPlaceholder(color) {
+  return `<div class="photo-placeholder" style="--cat:${color}"><span>✦</span></div>`;
+}
+
 // ===== RENDER EVENTS =====
 function renderEvents(eventsToRender) {
   const eventList = document.getElementById("event-list");
   eventList.innerHTML = "";
 
   // Clear old markers and areas
-  markers.forEach(m => m.setMap(null));
+  clusterer.clearMarkers();
   markers = [];
   areaCircles.forEach(c => c.setMap(null));
   areaCircles = [];
+  closeActiveInfoWindow();
+  hoverRing.setMap(null);
+  activeCard = null;
 
   if (eventsToRender.length === 0) {
     eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events found for this category.</p>`;
     return;
   }
+
+  const today = todayYmd();
+  let lastGroup = null;
+  let section = null; // each date group gets its own section, so its heading sticks only while it's on screen
 
   eventsToRender.forEach(function (event, index) {
     // Escape every field once up front — event data comes from users/APIs and must never be treated as HTML
@@ -163,8 +293,24 @@ function renderEvents(eventsToRender) {
       venue: escapeHtml(event.venue),
       city: escapeHtml(event.city),
       url: safeUrl(event.url),
+      image: safeUrl(event.image),
       id: escapeHtml(event.id),
     };
+    const color = categoryColor(event.category); // fixed value from CATEGORY_COLORS
+    const price = Number.isFinite(event.price_min) ? `From $${Math.round(event.price_min)}` : "";
+    const position = { lat: event.lat, lng: event.lng };
+
+    // --- DATE HEADING ---
+    const group = dateGroup(eventYmd(event), today);
+    if (group !== lastGroup) {
+      section = document.createElement("section");
+      const heading = document.createElement("h3");
+      heading.className = "date-group";
+      heading.textContent = group;
+      section.appendChild(heading);
+      eventList.appendChild(section);
+      lastGroup = group;
+    }
 
     // Host chose to hide the exact address: the server only sends a rounded point,
     // so we shade the general area and say so instead of implying an exact spot
@@ -175,61 +321,64 @@ function renderEvents(eventsToRender) {
     if (approximate) {
       areaCircles.push(new google.maps.Circle({
         map,
-        center: { lat: event.lat, lng: event.lng },
+        center: position,
         radius: 800,
-        fillColor: "#c9a84c",
+        fillColor: color,
         fillOpacity: 0.12,
-        strokeColor: "#c9a84c",
+        strokeColor: color,
         strokeOpacity: 0.5,
         strokeWeight: 1,
         clickable: false,
       }));
     }
 
-    // --- MARKER ---
+    // --- MARKER (added to the clusterer, which decides when it's shown) ---
     const marker = new google.maps.Marker({
-      position: { lat: event.lat, lng: event.lng },
-      map: map,
+      position,
       title: event.name,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 10,
-        fillColor: "#c9a84c",
-        fillOpacity: approximate ? 0.35 : 1, // hollow-looking pin = approximate area
-        strokeColor: "#0d0d0d",
-        strokeWeight: 2,
-      },
+      icon: pinIcon(color, approximate),
     });
 
-    // --- INFO WINDOW ---
-    const infoWindow = new google.maps.InfoWindow({
-      content: `
-        <div style="background:#1a1a1a; color:#f0ece4; padding:12px 14px; border-radius:8px; min-width:180px; font-family:'Segoe UI',Arial,sans-serif;">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
-            <div style="font-size:11px; color:#c9a84c; text-transform:uppercase; letter-spacing:0.08em;">${safe.category}${event.submitted ? " · Community" : ""}</div>
+    // --- POPUP ---
+    const popup = `
+      <div class="popup">
+        ${safe.image ? `<img class="popup-photo" src="${safe.image}" alt="" />` : ""}
+        <div class="popup-body">
+          <div class="popup-top">
+            <div class="popup-category" style="color:${color}">${safe.category}${event.submitted ? " · Community" : ""}</div>
             ${ageBadge(event.age_restriction)}
           </div>
-          <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${safe.name}</div>
-          <div style="font-size:12px; color:#aaa;">📅 ${safe.date} · ${safe.time}</div>
-          <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${where}</div>
-          ${approximate ? `<div style="font-size:11px; color:#888; margin-top:3px;">Exact address shared by the host</div>` : ""}
-          ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:8px; background:#c9a84c; color:#0d0d0d; font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; text-decoration:none;">${event.submitted ? "Event Link" : "View Tickets"}</a>` : ""}
-          ${event.submitted ? `<button class="report-btn" data-id="${safe.id}" style="margin-top:8px; margin-left:6px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
+          <div class="popup-name">${safe.name}</div>
+          <div class="popup-meta">📅 ${safe.date} · ${safe.time}</div>
+          <div class="popup-meta">📍 ${where}</div>
+          ${approximate ? `<div class="popup-note">Exact address shared by the host</div>` : ""}
+          ${price ? `<div class="popup-meta">🎟️ ${price}</div>` : ""}
+          <div class="popup-actions">
+            ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="popup-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
+            ${event.submitted ? `<button class="report-btn" data-id="${safe.id}">Report</button>` : ""}
+          </div>
         </div>
-      `,
-    });
+      </div>
+    `;
 
-    marker.addListener("click", function () {
+    function openPopup() {
       closeActiveInfoWindow();
-      infoWindow.open(map, marker);
-      activeInfoWindow = infoWindow;
+      infoWindow.setContent(popup);
+      infoWindow.setPosition(position);
+      infoWindow.open({ map });
+      google.maps.event.addListenerOnce(infoWindow, "domready", () => {
+        const btn = document.querySelector(`.report-btn[data-id="${CSS.escape(String(event.id))}"]`);
+        if (btn) btn.addEventListener("click", () => reportEvent(event.id, btn));
+        const photo = document.querySelector(".popup-photo");
+        if (photo) photo.addEventListener("error", () => photo.remove());
+      });
       setActiveCard(index);
-    });
+    }
 
-    infoWindow.addListener("domready", () => {
-      const btn = document.querySelector(`.report-btn[data-id="${CSS.escape(String(event.id))}"]`);
-      if (btn) btn.addEventListener("click", () => reportEvent(event.id, btn));
-    });
+    marker.addListener("click", openPopup);
+    // Pin <-> card: hovering a pin lights up its card
+    marker.addListener("mouseover", () => card.classList.add("linked"));
+    marker.addListener("mouseout", () => card.classList.remove("linked"));
 
     markers.push(marker);
 
@@ -237,42 +386,69 @@ function renderEvents(eventsToRender) {
     const card = document.createElement("div");
     card.className = "event-card";
     card.dataset.index = index;
+    card.style.setProperty("--cat", color);
+
+    // Cards only show an age when the event states one; "Check venue" lives in the popup
+    const cardAge = ["All Ages", "18+", "21+"].includes(event.age_restriction) ? ageBadge(event.age_restriction) : "";
 
     card.innerHTML = `
-      <div class="event-card-top">
+      <div class="event-card-photo">
+        ${safe.image ? `<img src="${safe.image}" alt="" loading="lazy" />` : photoPlaceholder(color)}
+        ${cardAge ? `<div class="photo-age">${cardAge}</div>` : ""}
+      </div>
+      <div class="event-card-body">
         <div class="event-card-category">${safe.category}${event.submitted ? " · Community" : ""}</div>
-        ${ageBadge(event.age_restriction)}
+        <h3>${safe.name}</h3>
+        <div class="event-card-meta">
+          <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>
+          <span><span class="icon">📍</span>${where}</span>
+        </div>
+        <div class="event-card-footer">
+          ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : "<span></span>"}
+          ${price ? `<span class="event-card-price">${price}</span>` : ""}
+        </div>
       </div>
-      <h3>${safe.name}</h3>
-      <div class="event-card-meta">
-        <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>
-        <span><span class="icon">📍</span>${where}</span>
-      </div>
-      ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
     `;
 
+    const img = card.querySelector(".event-card-photo img");
+    if (img) img.addEventListener("error", () => { img.outerHTML = photoPlaceholder(color); });
+
     card.addEventListener("click", function () {
-      closeActiveInfoWindow();
-      map.setCenter(marker.getPosition());
-      map.setZoom(15);
-      infoWindow.open(map, marker);
-      activeInfoWindow = infoWindow;
-      setActiveCard(index);
+      map.panTo(position);
+      if (map.getZoom() < 15) map.setZoom(15);
+      openPopup();
     });
+
+    // Card -> pin: a ring marks the spot on the map, even when the pin is inside a group
+    card.addEventListener("mouseenter", () => {
+      hoverRing.setPosition(position);
+      hoverRing.setIcon({ ...hoverRing.getIcon(), strokeColor: color });
+      hoverRing.setMap(map);
+    });
+    card.addEventListener("mouseleave", () => hoverRing.setMap(null));
 
     const cardLink = card.querySelector(".event-card-link");
     if (cardLink) {
       cardLink.addEventListener("click", (e) => e.stopPropagation());
     }
 
-    eventList.appendChild(card);
+    section.appendChild(card);
   });
+
+  clusterer.addMarkers(markers);
 }
 
 // ===== FILTERS =====
 function setupFilters() {
   const filterBtns = document.querySelectorAll(".filter-btn");
   filterBtns.forEach(btn => {
+    // Color dot matching the pins, so the buttons double as a key
+    if (btn.dataset.filter !== "All") {
+      const dot = document.createElement("span");
+      dot.className = "legend-dot";
+      dot.style.background = categoryColor(btn.dataset.filter);
+      btn.prepend(dot);
+    }
     btn.addEventListener("click", function () {
       filterBtns.forEach(b => b.classList.remove("active"));
       this.classList.add("active");
@@ -300,10 +476,7 @@ function setActiveCard(index) {
 }
 
 function closeActiveInfoWindow() {
-  if (activeInfoWindow) {
-    activeInfoWindow.close();
-    activeInfoWindow = null;
-  }
+  if (infoWindow) infoWindow.close();
 }
 
 // ===== REPORT EVENT =====

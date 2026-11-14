@@ -222,10 +222,11 @@ body {
 
 /* ===== EVENT CARDS ===== */
 .event-card {
+  --cat: #c9a84c; /* category color, set per card by script.js */
   background: #1a1a1a;
   border: 1px solid #2a2a2a;
   border-radius: 12px;
-  padding: 16px;
+  padding: 0;
   margin-bottom: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -240,18 +241,21 @@ body {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: #c9a84c;
+  background: var(--cat);
   opacity: 0;
+  z-index: 1;
   transition: opacity 0.2s;
 }
 
-.event-card:hover {
+.event-card:hover,
+.event-card.linked {
   border-color: #c9a84c44;
   background: #1f1f1f;
   transform: translateY(-1px);
 }
 
-.event-card:hover::before {
+.event-card:hover::before,
+.event-card.linked::before {
   opacity: 1;
 }
 
@@ -268,7 +272,7 @@ body {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #c9a84c;
+  color: var(--cat, #c9a84c);
   margin-bottom: 6px;
   font-weight: 600;
 }
@@ -366,6 +370,201 @@ body {
 
 .event-card-link:hover {
   background: #ddbb5e;
+}
+
+/* ===== CARD PHOTO, BODY, PRICE ===== */
+.event-card-photo {
+  position: relative;
+  height: 120px;
+  background: #111;
+  overflow: hidden;
+}
+
+.event-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.event-card:hover .event-card-photo img {
+  transform: scale(1.03);
+}
+
+/* Age badge sits on the photo; a dark backing keeps it readable on any image */
+.photo-age {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(13, 13, 13, 0.75);
+  border-radius: 999px;
+}
+
+/* Events without a photo: soft gradient in the category's color */
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--cat) 45%, transparent), transparent 60%),
+    linear-gradient(135deg, color-mix(in srgb, var(--cat) 25%, #141414), #141414);
+}
+
+.photo-placeholder span {
+  font-size: 34px;
+  color: color-mix(in srgb, var(--cat) 80%, white);
+  opacity: 0.8;
+}
+
+.event-card-body {
+  padding: 12px 16px 14px;
+}
+
+.event-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.event-card-footer .event-card-link {
+  margin-top: 0;
+}
+
+.event-card-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f0ece4;
+  background: #262626;
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+
+/* ===== DATE HEADINGS IN THE LIST ===== */
+.date-group {
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  margin: 4px -16px 10px;
+  padding: 10px 16px 8px;
+  background: #141414;
+  border-bottom: 1px solid #222;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f0ece4;
+}
+
+/* ===== CATEGORY COLOR KEY ===== */
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.map-legend {
+  margin: 0 0 24px 12px;
+  padding: 10px 12px;
+  background: rgba(20, 20, 20, 0.9);
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 12px;
+  color: #ccc;
+  line-height: 1.8;
+}
+
+.filter-btn.active .legend-dot {
+  border-color: #0d0d0d;
+}
+
+/* ===== MAP POPUP ===== */
+.popup {
+  background: #1a1a1a;
+  color: #f0ece4;
+  width: 260px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.popup-photo {
+  display: block;
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+}
+
+.popup-body {
+  padding: 12px 14px 14px;
+}
+
+.popup-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.popup-category {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.popup-name {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.popup-meta {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 3px;
+}
+
+.popup-note {
+  font-size: 11px;
+  color: #888;
+  margin-top: 3px;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.popup-link {
+  background: #c9a84c;
+  color: #0d0d0d;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.popup .report-btn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 
 /* ===== MAP (RIGHT) ===== */
@@ -477,6 +676,16 @@ body {
 
   .filter-btn {
     flex-shrink: 0;
+  }
+
+  .map-legend {
+    font-size: 11px;
+    padding: 6px 9px;
+    line-height: 1.6;
+  }
+
+  .event-card-photo {
+    height: 100px;
   }
 }
 
