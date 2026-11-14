@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Spot</title>
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
   <link rel="icon" href="/favicon-32.png" type="image/png" />
@@ -17,6 +17,7 @@
     <div class="logo">
       <span class="logo-icon">✦</span>
       <span class="logo-text">The <span>Spot</span></span>
+      <span class="tagline">Bay Area Events</span>
     </div>
     <div class="nav-right">
       <a href="https://www.instagram.com/blackbayeventsz/" target="_blank" rel="noopener noreferrer" class="ig-link" aria-label="Follow us on Instagram">
@@ -26,7 +27,6 @@
           <circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none" />
         </svg>
       </a>
-      <span class="tagline">Bay Area Events</span>
       <div id="nav-auth">
         <!-- Filled in by script.js based on login state -->
       </div>
@@ -39,7 +39,17 @@
     <!-- LEFT: EVENT PANEL -->
     <aside id="event-panel">
       <div id="panel-header">
-        <h2>Events Near You</h2>
+        <div class="panel-title">
+          <h2>Events Near You</h2>
+          <span id="list-summary" aria-live="polite"></span>
+        </div>
+        <input type="search" id="event-search" placeholder="Search artists, venues, cities…" aria-label="Search events" autocomplete="off" />
+        <div id="when-bar">
+          <button class="when-btn active" data-when="any">Any time</button>
+          <button class="when-btn" data-when="today">Today</button>
+          <button class="when-btn" data-when="weekend">This weekend</button>
+          <button class="when-btn" data-when="week">Next 7 days</button>
+        </div>
         <div id="filter-bar">
           <button class="filter-btn active" data-filter="All">All</button>
           <button class="filter-btn" data-filter="Hip-Hop & Rap">Hip-Hop</button>
@@ -60,7 +70,7 @@
 
   <script src="sanitize.js?v=5"></script>
   <script src="vendor/markerclusterer-2.5.3.min.js"></script>
-  <script src="script.js?v=15"></script>
+  <script src="script.js?v=16"></script>
 
   <!-- Loads Google Maps API — replace key below with your new restricted key -->
   <script async defer

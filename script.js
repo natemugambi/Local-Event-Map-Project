@@ -9,7 +9,10 @@ let infoWindow = null;     // one shared popup, moved to whichever event is open
 let clusterer = null;      // groups nearby pins into numbered circles
 let hoverRing = null;      // ring shown on the map while hovering a card
 let topZ = 100;            // raises the open event's pin above others at the same venue
-let currentFilter = "All";
+let currentFilter = "All";  // category button
+let currentWhen = "any";     // date button: any / today / weekend / week
+let searchText = "";         // search box
+let updatedAt = null;        // when the server last refreshed its events
 let allEvents = [];
 
 // One color per category — used for pins, the legend, card labels and photo placeholders
@@ -122,24 +125,40 @@ function renderNav(username) {
   const navAuth = document.getElementById("nav-auth");
 
   if (username) {
+    // Account links live in one dropdown so the bar stays uncluttered
     navAuth.innerHTML = `
-      <span class="nav-username"></span>
-      <a href="my-events.html" class="nav-login-link">My Events</a>
-      <a href="account.html" class="nav-login-link">Account</a>
       <a href="submit.html" class="submit-link">+ Host an Event</a>
-      <button class="logout-btn" id="logout-btn">Log Out</button>
+      <div class="user-menu">
+        <button class="user-menu-btn" id="user-menu-btn" aria-haspopup="true" aria-expanded="false">
+          <span class="user-avatar"></span><span class="nav-username"></span><span class="caret">▾</span>
+        </button>
+        <div class="user-menu-list" id="user-menu-list" hidden>
+          <a href="my-events.html">My Events</a>
+          <a href="account.html">Account</a>
+          <button id="logout-btn">Log Out</button>
+        </div>
+      </div>
     `;
     // textContent never interprets HTML, so the username can't inject markup
-    navAuth.querySelector(".nav-username").textContent = `Hi, ${username}`;
+    navAuth.querySelector(".nav-username").textContent = username;
+    navAuth.querySelector(".user-avatar").textContent = username.charAt(0).toUpperCase();
+
+    const btn = document.getElementById("user-menu-btn");
+    const list = document.getElementById("user-menu-list");
+    const setOpen = open => { list.hidden = !open; btn.setAttribute("aria-expanded", String(open)); };
+    btn.addEventListener("click", e => { e.stopPropagation(); setOpen(list.hidden); });
+    document.addEventListener("click", e => { if (!list.contains(e.target)) setOpen(false); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
+
     document.getElementById("logout-btn").addEventListener("click", () => {
       localStorage.removeItem("tg_user");
       window.location.reload();
     });
   } else {
     navAuth.innerHTML = `
+      <a href="submit.html" class="nav-host-link">+ Host an Event</a>
       <a href="login.html" class="nav-login-link">Log In</a>
       <a href="signup.html" class="submit-link">Sign Up</a>
-      <a href="submit.html" class="nav-login-link" style="margin-left:4px;">+ Host an Event</a>
     `;
   }
 }
@@ -152,10 +171,12 @@ async function loadEvents() {
   try {
     // Events the server collects from Ticketmaster, SeatGeek, Eventbrite and calendars
     // (search keywords live in server/collector/sources.js), plus community-submitted events
-    const [collectedEvents, submittedEvents] = await Promise.all([
+    const [collectedEvents, submittedEvents, status] = await Promise.all([
       fetch(`${SERVER_URL}/api/events`).then(r => r.json()),
       fetch(`${SERVER_URL}/api/submitted-events`).then(r => r.json()).catch(() => []),
+      fetch(`${SERVER_URL}/api/collector-status`).then(r => r.json()).catch(() => ({})),
     ]);
+    updatedAt = status.updatedAt ? new Date(status.updatedAt) : null;
 
     // Mark submitted events so we can show a "Community" badge + report button
     const taggedSubmitted = submittedEvents.map(e => ({ ...e, submitted: true }));
@@ -170,7 +191,7 @@ async function loadEvents() {
       return true;
     }).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
-    renderEvents(allEvents);
+    applyFilters();
   } catch (error) {
     console.error("Failed to load events:", error);
     eventList.innerHTML = `<p style="color:#888; text-align:center; padding: 40px 20px; font-size:14px;">Events are temporarily unavailable. Please try again shortly.</p>`;
@@ -290,7 +311,7 @@ function renderEvents(eventsToRender) {
   activeCard = null;
 
   if (eventsToRender.length === 0) {
-    eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events found for this category.</p>`;
+    eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events match your filters.</p>`;
     return;
   }
 
@@ -454,7 +475,7 @@ function renderEvents(eventsToRender) {
   clusterer.addMarkers(markers);
 }
 
-// ===== FILTERS =====
+// ===== FILTERS (category + date + search, all combined) =====
 function setupFilters() {
   const filterBtns = document.querySelectorAll(".filter-btn");
   filterBtns.forEach(btn => {
@@ -469,12 +490,74 @@ function setupFilters() {
       filterBtns.forEach(b => b.classList.remove("active"));
       this.classList.add("active");
       currentFilter = this.dataset.filter;
-      const filtered = currentFilter === "All"
-        ? allEvents
-        : allEvents.filter(e => e.category === currentFilter);
-      renderEvents(filtered);
+      applyFilters();
     });
   });
+
+  const whenBtns = document.querySelectorAll(".when-btn");
+  whenBtns.forEach(btn => btn.addEventListener("click", function () {
+    whenBtns.forEach(b => b.classList.remove("active"));
+    this.classList.add("active");
+    currentWhen = this.dataset.when;
+    applyFilters();
+  }));
+
+  // Wait until typing pauses briefly before re-drawing the list and map
+  let typingTimer;
+  document.getElementById("event-search").addEventListener("input", e => {
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      searchText = e.target.value.trim().toLowerCase();
+      applyFilters();
+    }, 150);
+  });
+
+  // Keep "updated X min ago" current while the page stays open
+  setInterval(updateSummary, 60 * 1000);
+}
+
+// Is this event inside the chosen date range?
+function matchesWhen(event, today) {
+  if (currentWhen === "any") return true;
+  const ymd = eventYmd(event);
+  if (!ymd) return false;
+  const daysAway = dayNumber(ymd) - dayNumber(today);
+  if (currentWhen === "today") return daysAway === 0;
+  if (currentWhen === "week") return daysAway >= 0 && daysAway < 7;
+  // This weekend: the coming (or current) Friday–Sunday
+  const toSunday = (7 - weekday(today)) % 7;
+  return daysAway >= 0 && daysAway <= toSunday && [5, 6, 0].includes(weekday(ymd));
+}
+
+let shownCount = 0;
+
+function applyFilters() {
+  const today = todayYmd();
+  const words = searchText.split(/\s+/).filter(Boolean);
+  const filtered = allEvents.filter(e => {
+    if (currentFilter !== "All" && e.category !== currentFilter) return false;
+    if (!matchesWhen(e, today)) return false;
+    // Every typed word must appear somewhere in the name, venue, city or category
+    const haystack = `${e.name} ${e.venue} ${e.city} ${e.category}`.toLowerCase();
+    return words.every(w => haystack.includes(w));
+  });
+  shownCount = filtered.length;
+  renderEvents(filtered);
+  updateSummary();
+}
+
+// "82 events · updated 5 min ago" (or "12 of 82 events" while filtering)
+function updateSummary() {
+  const el = document.getElementById("list-summary");
+  if (!el || !allEvents.length) return;
+  const total = allEvents.length;
+  const count = shownCount === total ? `${total} events` : `${shownCount} of ${total} events`;
+  let ago = "";
+  if (updatedAt) {
+    const mins = Math.max(0, Math.round((Date.now() - updatedAt) / 60000));
+    ago = mins < 1 ? " · updated just now" : mins < 60 ? ` · updated ${mins} min ago` : ` · updated ${Math.round(mins / 60)} hr ago`;
+  }
+  el.textContent = count + ago;
 }
 
 // ===== HELPERS =====

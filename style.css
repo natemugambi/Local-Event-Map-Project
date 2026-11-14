@@ -50,16 +50,121 @@ body {
 }
 
 #navbar .tagline {
-  font-size: 13px;
-  color: #888;
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  color: #777;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  margin-left: 6px;
+  padding-left: 14px;
+  border-left: 1px solid #333;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
+}
+
+#nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Logged out: "+ Host an Event" as a quiet text link next to Log In / Sign Up */
+.nav-host-link {
+  font-size: 13px;
+  color: #ccc;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.nav-host-link:hover {
+  color: #c9a84c;
+}
+
+/* ===== ACCOUNT DROPDOWN ===== */
+.user-menu {
+  position: relative;
+}
+
+.user-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ddd;
+  font-size: 13px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.user-menu-btn:hover,
+.user-menu-btn[aria-expanded="true"] {
+  border-color: #c9a84c;
+}
+
+.user-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #c9a84c;
+  color: #0d0d0d;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-menu-btn .caret {
+  font-size: 10px;
+  color: #888;
+}
+
+.user-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 160px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  z-index: 200;
+}
+
+.user-menu-list a,
+.user-menu-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #ddd;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.user-menu-list a:hover,
+.user-menu-list button:hover {
+  background: #252525;
+  color: #c9a84c;
+}
+
+.user-menu-list button {
+  border-top: 1px solid #262626;
+  border-radius: 0 0 6px 6px;
+  margin-top: 4px;
+  color: #999;
 }
 
 .submit-link {
@@ -151,7 +256,75 @@ body {
   color: #c9a84c;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
   margin-bottom: 12px;
+}
+
+#list-summary {
+  font-size: 11px;
+  color: #777;
+  white-space: nowrap;
+}
+
+#event-search {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  color: #f0ece4;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  outline: none;
+  font-family: inherit;
+}
+
+#event-search:focus {
+  border-color: #c9a84c;
+}
+
+#event-search::placeholder {
+  color: #666;
+}
+
+/* Date range: a compact segmented control */
+#when-bar {
+  display: flex;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+
+.when-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 12px;
+  padding: 6px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.when-btn:hover {
+  color: #f0ece4;
+}
+
+.when-btn.active {
+  background: #2a2a2a;
+  color: #f0ece4;
+  font-weight: 600;
 }
 
 /* ===== FILTER BAR ===== */
@@ -355,21 +528,25 @@ body {
   font-size: 13px;
 }
 
+/* Outline style so the photo and name lead; fills in gold on hover */
 .event-card-link {
   display: inline-block;
   margin-top: 10px;
-  background: #c9a84c;
-  color: #0d0d0d;
+  background: transparent;
+  color: #c9a84c;
+  border: 1px solid rgba(201, 168, 76, 0.45);
   font-size: 12px;
-  font-weight: 700;
-  padding: 6px 12px;
+  font-weight: 600;
+  padding: 5px 11px;
   border-radius: 6px;
   text-decoration: none;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .event-card-link:hover {
-  background: #ddbb5e;
+  background: #c9a84c;
+  border-color: #c9a84c;
+  color: #0d0d0d;
 }
 
 /* ===== CARD PHOTO, BODY, PRICE ===== */
@@ -661,10 +838,12 @@ body {
     justify-content: flex-end;
   }
 
-  .nav-username {
-    width: 100%;
-    text-align: right;
-    order: -1;
+  .user-menu-btn .nav-username {
+    display: none; /* avatar letter is enough on small screens */
+  }
+
+  .user-menu-btn {
+    padding: 3px 8px 3px 3px;
   }
 
   #filter-bar {
@@ -676,6 +855,20 @@ body {
 
   .filter-btn {
     flex-shrink: 0;
+  }
+
+  /* On phones the search and filters scroll away with the list, leaving room for cards */
+  #event-panel {
+    display: block;
+    overflow-y: auto;
+  }
+
+  #event-list {
+    overflow: visible;
+  }
+
+  .date-group {
+    top: 0;
   }
 
   .map-legend {
