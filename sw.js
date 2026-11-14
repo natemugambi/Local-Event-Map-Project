@@ -1,11 +1,11 @@
-const CACHE_NAME = "the-spot-v8";
+const CACHE_NAME = "the-spot-v9";
 
 const APP_SHELL = [
   "/",
   "/index.html",
   "/style.css?v=7",
   "/sanitize.js?v=5",
-  "/script.js?v=10",
+  "/script.js?v=11",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

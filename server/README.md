@@ -18,6 +18,8 @@ Requires a `.env` file in this folder (never committed — see `.gitignore`):
 | `DATABASE_URL` | PostgreSQL connection string (Railway provides this in production) |
 | `RESEND_API_KEY` | *Optional.* Resend API key for password-reset and email-verification emails. While unset, those emails are skipped and email verification isn't enforced. |
 | `EMAIL_FROM` | *Optional.* Sender address, default `The Spot <no-reply@findthespot.net>` (the domain must be verified in Resend) |
+| `SEATGEEK_CLIENT_ID` | *Optional.* SeatGeek Platform API client ID (free at seatgeek.com/account/develop). Adds SeatGeek events when set. |
+| `EVENTBRITE_TOKEN` | *Optional.* Eventbrite private token. Adds events from the organizers listed in `collector/sources.js` when set. |
 | `SITE_URL` | *Optional.* Base URL used in email links, default `https://findthespot.net` |
 | `PORT` | Optional, defaults to 3000 |
 
@@ -54,3 +56,12 @@ Tables are created (and the `event_date` column added) automatically at startup 
 - **PostgreSQL over SQLite** — Railway's filesystem is wiped on each deploy; SQLite lost all data. Postgres runs as a separate persistent service
 - **Auto-publish + reports over a moderation queue** — no human bottleneck; structural validation (required fields, geocodable address, future date) plus community reporting
 - **Two date columns** — `date` is human display text; `event_date` is a real DATE the database can compare for expiry. Machine format in storage, human format at display time
+
+## Event collector
+
+`collector/` gathers map events from Ticketmaster, SeatGeek, Eventbrite and calendar
+(iCal) feeds every 30 minutes, removes duplicates, and serves them from memory at
+`GET /api/events`. To add sources, edit `collector/sources.js` (search keywords,
+Eventbrite organizers, calendar feeds). Calendar addresses are turned into map pins with
+OpenStreetMap's Nominatim service and cached in the `geocode_cache` table. Each refresh
+logs a summary line starting with `[collector]`.

@@ -77,6 +77,16 @@ async function initDB() {
     )
   `);
 
+  // Saved address -> map coordinate lookups for calendar-feed events (lat NULL = not found)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS geocode_cache (
+      query TEXT PRIMARY KEY,
+      lat DOUBLE PRECISION,
+      lng DOUBLE PRECISION,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // One row per (user, event) report — the primary key stops duplicate reports
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_reports (

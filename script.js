@@ -1,14 +1,6 @@
 // ===== CONFIG =====
 const SERVER_URL = "https://local-event-map-project-production.up.railway.app";
 
-// Keywords to search — these pull Black-centered Bay Area events
-const SEARCH_KEYWORDS = [
-  "afrobeats",
-  "R&B",
-  "hip hop",
-  "juneteenth",
-];
-
 let map;
 let markers = [];
 let activeCard = null;
@@ -117,22 +109,23 @@ async function loadEvents() {
   eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">Loading events...</p>`;
 
   try {
-    // Fetch all keyword searches in parallel, plus community-submitted events
-    const [keywordResults, submittedEvents] = await Promise.all([
-      Promise.all(
-        SEARCH_KEYWORDS.map(k => fetch(`${SERVER_URL}/api/events?keyword=${encodeURIComponent(k)}`).then(r => r.json()))
-      ),
+    // Events the server collects from Ticketmaster, SeatGeek, Eventbrite and calendars
+    // (search keywords live in server/collector/sources.js), plus community-submitted events
+    const [collectedEvents, submittedEvents] = await Promise.all([
+      fetch(`${SERVER_URL}/api/events`).then(r => r.json()),
       fetch(`${SERVER_URL}/api/submitted-events`).then(r => r.json()).catch(() => []),
     ]);
 
     // Mark submitted events so we can show a "Community" badge + report button
     const taggedSubmitted = submittedEvents.map(e => ({ ...e, submitted: true }));
 
-    // Merge and deduplicate by event name
+    // The server already removes duplicates between its sources; this only catches a
+    // community post that repeats a collected event. Name + date, so multi-night runs stay.
     const seen = new Set();
-    allEvents = [...taggedSubmitted, ...keywordResults.flat()].filter(e => {
-      if (seen.has(e.name)) return false;
-      seen.add(e.name);
+    allEvents = [...taggedSubmitted, ...collectedEvents].filter(e => {
+      const key = `${e.name.toLowerCase()}|${e.date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 

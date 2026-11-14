@@ -6,11 +6,11 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { pool, initDB } = require("./db");
+const { startCollector, getEvents } = require("./collector");
 
 const app = express();
 app.disable("x-powered-by"); // don't advertise that we run Express
 const PORT = process.env.PORT || 3000;
-const TM_KEY = process.env.TICKETMASTER_KEY;
 const JWT_SECRET = process.env.SESSION_SECRET;
 const REPORT_THRESHOLD = 5;
 const DAILY_SUBMISSION_LIMIT = 5; // per user, rolling 24 hours
@@ -108,46 +108,10 @@ function requireAuth(req, res, next) {
 }
 
 // ===== EVENTS ENDPOINT =====
+// Events from Ticketmaster, SeatGeek, Eventbrite and calendar feeds, collected in the
+// background every 30 minutes (see collector/). Any ?keyword= from older pages is ignored.
 app.get("/api/events", async (req, res) => {
-  const keyword = req.query.keyword || "black music";
-  const url = `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TM_KEY}&keyword=${encodeURIComponent(keyword)}&latlong=37.7749,-122.4194&radius=30&unit=miles&sort=date,asc&size=20`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (!data._embedded || !data._embedded.events) {
-      return res.json([]);
-    }
-
-    const events = data._embedded.events
-      .filter(e => {
-        const venue = e._embedded?.venues?.[0];
-        return venue?.location?.latitude && venue?.location?.longitude;
-      })
-      .map(e => {
-        const venue = e._embedded.venues[0];
-        const date = e.dates?.start?.localDate;
-        const time = e.dates?.start?.localTime;
-        return {
-          name: e.name,
-          category: mapCategory(e.classifications?.[0]?.segment?.name, e.classifications?.[0]?.genre?.name),
-          date: date ? formatDate(date) : "Date TBA",
-          time: time ? formatTime(time) : "Time TBA",
-          city: venue.city?.name || "Bay Area",
-          venue: venue.name || "Venue TBA",
-          lat: parseFloat(venue.location.latitude),
-          lng: parseFloat(venue.location.longitude),
-          url: e.url,
-          age_restriction: ticketmasterAgeRestriction(e),
-        };
-      });
-
-    res.json(events);
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    res.status(500).json({ error: "Failed to fetch events" });
-  }
+  res.json(await getEvents());
 });
 
 // ===== AUTH =====
@@ -530,31 +494,6 @@ async function sendVerificationEmail(userId, email) {
     <p>This link expires in 24 hours. If you didn't sign up, you can ignore this email.</p>`);
 }
 
-// Ticketmaster's structured ageRestrictions field is almost always empty, but the
-// event's own text often says "21+" or "This event is 21 and over". Venues also
-// paste generic legal text ("For any event that is 18 or 21 and over...") onto
-// every event, so those sentences are dropped before looking for an age.
-// Returns null when the event doesn't state an age — we don't assume "All Ages".
-const AGE_BOILERPLATE = /\b(any (event|show|ticket)|listed as|from time to time)\b/i;
-const AGE_21 = /\b21\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
-const AGE_18 = /\b18\s*(\+|(and|&)\s*(over|up|older)|or older)/i;
-const AGE_ALL = /\ball[- ]ages\b/i;
-
-function ticketmasterAgeRestriction(e) {
-  const text = [e.name, e.ageRestrictions?.ageRuleDescription, e.info, e.pleaseNote].filter(Boolean).join(". ");
-  const specific = text
-    .split(/[.!?\n]+/)
-    .filter(sentence => !AGE_BOILERPLATE.test(sentence))
-    .join(". ");
-
-  if (AGE_21.test(specific)) return "21+";
-  if (AGE_18.test(specific)) return "18+";
-  if (AGE_ALL.test(specific)) return "All Ages";
-  return null;
-}
-
-// Event links are rendered as <a href>, so only http(s) is allowed —
-// blocks "javascript:" / "data:" URLs that would run code when clicked.
 function isSafeUrl(value) {
   try {
     const parsed = new URL(String(value));
@@ -562,32 +501,6 @@ function isSafeUrl(value) {
   } catch (e) {
     return false;
   }
-}
-
-function formatDate(dateStr) {
-  const [year, month, day] = dateStr.split("-");
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-}
-
-function formatTime(timeStr) {
-  const [hour, minute] = timeStr.split(":");
-  const date = new Date();
-  date.setHours(hour, minute);
-  return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-}
-
-function mapCategory(segment, genre) {
-  const hipHopGenres = ["Hip-Hop/Rap", "Trap", "Urban"];
-  const rbGenres = ["R&B", "Soul", "Pop-Soul", "Motown"];
-  const comedySegments = ["Comedy", "Arts & Theatre"];
-
-  if (hipHopGenres.includes(genre)) return "Hip-Hop & Rap";
-  if (rbGenres.includes(genre)) return "R&B & Soul";
-  if (comedySegments.includes(genre) || segment === "Arts & Theatre") return "Comedy & Arts";
-  if (segment === "Sports") return "Community Gatherings";
-
-  return "Festivals & Entertainment";
 }
 
 // ===== ERROR HANDLING =====
@@ -609,6 +522,7 @@ app.use((err, req, res, next) => {
 // ===== START SERVER =====
 async function start() {
   await initDB();
+  startCollector();
   app.listen(PORT, () => {
     console.log(`The Spot server running on http://localhost:${PORT}`);
   });

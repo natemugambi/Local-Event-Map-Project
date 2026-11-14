@@ -22,6 +22,15 @@ open it, see what's happening tonight, know if you can get in.
 - [ ] Event detail pages with shareable links
 - [ ] Email verification / password reset
 
+## More event sources (collector is live — these switch on more sources)
+
+- [ ] **SeatGeek:** free developer account at seatgeek.com → get a client ID → Railway → Variables → `SEATGEEK_CLIENT_ID`
+- [ ] **Eventbrite:** free account → Account Settings → Developer Links → API Keys → private token → Railway → `EVENTBRITE_TOKEN`; then list organizers to follow in `server/collector/sources.js`
+- [ ] **Calendar feeds:** collect Luma / Google Calendar / org calendar links (Black Student Unions, cultural centers, promoters) and add them to `CALENDAR_FEEDS`
+- [ ] Meetup — confirm whether its API needs a paid Pro plan before building
+- [ ] Review queue for broad calendars (e.g. UC Berkeley's) — only trusted sources publish automatically today
+- [ ] "Import from link" on the submit form (Partiful / Luma / Posh links) + approximate-location option for house parties
+
 ## Growth
 
 - [ ] Drive initial traffic — Instagram [@blackbayeventsz](https://www.instagram.com/blackbayeventsz/) linking to findthespot.net
@@ -53,6 +62,7 @@ The code is live; these two steps (done by you in dashboards) switch on the emai
 
 ## Done
 
+- [x] Event collector: Ticketmaster, SeatGeek, Eventbrite and calendar feeds gathered every 30 min with duplicate removal; map loads in one request (Nov 2026)
 - [x] User account security: case-insensitive usernames/emails, event list no longer exposes account IDs, change password, log out everywhere, password reset, email verification, account deletion, Privacy Policy page (Oct 2026)
 - [x] Age restrictions on events — All Ages / 18+ / 21+ badges; Ticketmaster events show "Check venue" unless their listing states an age (Oct 2026)
 - [x] Security audit fixes, issues #2–#7: XSS escaping, report-abuse protection, security headers/CSP, generic error messages, server-verified login display, per-IP rate limits + signup validation (Sept–Oct 2026)
