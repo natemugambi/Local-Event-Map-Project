@@ -73,6 +73,9 @@ function initMap() {
   });
   addLegend();
 
+  // Clicking anywhere on the map (not on a pin) clears the current selection
+  map.addListener("click", clearSelection);
+
   setupFilters();
   loadEvents();
   setupNav();
@@ -227,20 +230,27 @@ function pinIcon(color, approximate) {
   };
 }
 
-// Numbered circle standing in for a group of nearby pins
-function renderCluster({ count, position }) {
+// A group of nearby pins: drawn like a regular pin (slightly bigger) with the count
+// inside, in the color of the most common category in the group
+function renderCluster({ count, position, markers: grouped }) {
+  const tally = {};
+  for (const m of grouped) {
+    const color = m.getIcon()?.fillColor;
+    tally[color] = (tally[color] || 0) + 1;
+  }
+  const color = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0] || "#c9a84c";
+
   return new google.maps.Marker({
     position,
     zIndex: 1000 + count,
-    label: { text: String(count), color: "#0d0d0d", fontSize: "12px", fontWeight: "700" },
+    label: { text: String(count), color: "#0d0d0d", fontSize: "11px", fontWeight: "700" },
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
-      scale: 14 + Math.min(count, 30) / 3,
-      fillColor: "#f0ece4",
-      fillOpacity: 0.95,
-      strokeColor: "#c9a84c",
-      strokeOpacity: 0.6,
-      strokeWeight: 6,
+      scale: 11 + Math.min(count, 20) / 5, // 11–15, a little bigger than a single pin (9)
+      fillColor: color,
+      fillOpacity: 1,
+      strokeColor: "#0d0d0d",
+      strokeWeight: 2,
     },
   });
 }
@@ -478,6 +488,16 @@ function setActiveCard(index) {
   if (current) {
     current.classList.add("active");
     current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+}
+
+function clearSelection() {
+  closeActiveInfoWindow();
+  hoverRing.setMap(null);
+  if (activeCard !== null) {
+    const card = document.querySelector(`.event-card[data-index="${activeCard}"]`);
+    if (card) card.classList.remove("active");
+    activeCard = null;
   }
 }
 
