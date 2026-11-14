@@ -44,9 +44,19 @@ function distanceKm(a, b) {
   return 12742 * Math.asin(Math.sqrt(h));
 }
 
-// Same day, same place (within ~250 m), and mostly the same words in the name
+// "The Warfield" / "Warfield" / "Cornerstone - Berkeley" -> "warfield" / "cornerstone"
+function venueKey(venue) {
+  return String(venue || "").toLowerCase().split(" - ")[0]
+    .replace(/^the\s+/, "").replace(/[^a-z0-9]/g, "");
+}
+
+// Same day, same place, and mostly the same words in the name. "Same place" is within
+// ~250 m, or within 3 km when both sources name the same venue (sources sometimes put
+// a venue's pin a few blocks off — Ticketmaster's Warfield pin is ~900 m from SeatGeek's)
 function isDuplicate(a, b) {
-  if (a.ymd !== b.ymd || distanceKm(a, b) > 0.25) return false;
+  if (a.ymd !== b.ymd) return false;
+  const maxKm = venueKey(a.venue) && venueKey(a.venue) === venueKey(b.venue) ? 3 : 0.25;
+  if (distanceKm(a, b) > maxKm) return false;
   const ta = a.tokens, tb = b.tokens;
   if (!ta.size || !tb.size) return a.name.toLowerCase() === b.name.toLowerCase();
   let shared = 0;

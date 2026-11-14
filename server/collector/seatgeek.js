@@ -6,7 +6,11 @@ const { SEARCH_KEYWORDS } = require("./sources");
 const CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
 
 function mapCategory(e) {
-  const genres = (e.performers || []).flatMap(p => p.genres || []).map(g => g.name.toLowerCase()).join(" ");
+  // Use the headliner's genres, so a rock show with a hip-hop opener isn't filed as Hip-Hop
+  const performers = e.performers || [];
+  const headliner = performers.filter(p => p.primary);
+  const genres = (headliner.length ? headliner : performers.slice(0, 1))
+    .flatMap(p => p.genres || []).map(g => g.name.toLowerCase()).join(" ");
   const type = (e.type || "").toLowerCase();
   if (/hip[- ]hop|rap/.test(genres)) return "Hip-Hop & Rap";
   if (/r&b|rnb|soul/.test(genres)) return "R&B & Soul";
