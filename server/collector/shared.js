@@ -2,8 +2,9 @@
 
 const TIME_ZONE = "America/Los_Angeles";
 
-// Center of the map and how far out we look, used by sources that search by location
-const BAY_AREA = { lat: 37.7749, lng: -122.4194, radiusMiles: 30 };
+// Center of the map and how far out we look, used by sources that search by location.
+// maxKm: events farther than this from SF are dropped (e.g. a promoter's Las Vegas show).
+const BAY_AREA = { lat: 37.7749, lng: -122.4194, radiusMiles: 30, maxKm: 80 };
 
 // Identifies us to the sites we read from (some block requests without one)
 const USER_AGENT = "TheSpot/1.0 (+https://findthespot.net; privacy@findthespot.net)";

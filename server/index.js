@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { pool, initDB } = require("./db");
-const { startCollector, getEvents } = require("./collector");
+const { startCollector, getEvents, getStatus } = require("./collector");
 
 const app = express();
 app.disable("x-powered-by"); // don't advertise that we run Express
@@ -112,6 +112,11 @@ function requireAuth(req, res, next) {
 // background every 30 minutes (see collector/). Any ?keyword= from older pages is ignored.
 app.get("/api/events", async (req, res) => {
   res.json(await getEvents());
+});
+
+// How many events each source returned last time, and any error — for checking new API keys
+app.get("/api/collector-status", (req, res) => {
+  res.json(getStatus());
 });
 
 // ===== AUTH =====

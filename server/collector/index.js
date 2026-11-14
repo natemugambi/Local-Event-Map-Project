@@ -1,7 +1,7 @@
 // ===== EVENT COLLECTOR =====
 // Pulls events from every source every 30 minutes, removes duplicates, and keeps
 // the result in memory so the map loads with one fast request.
-const { displayDate, displayTime, todayLocal } = require("./shared");
+const { BAY_AREA, displayDate, displayTime, todayLocal } = require("./shared");
 const { resetLookupBudget } = require("./geocode");
 const { fetchTicketmaster } = require("./ticketmaster");
 const { fetchSeatGeek } = require("./seatgeek");
@@ -19,7 +19,9 @@ const SOURCES = [
 ];
 
 const lastGood = new Map(); // source name -> its last successful list of events
+const status = new Map();   // source name -> { count, error, checkedAt } for /api/collector-status
 let events = [];
+let updatedAt = null;
 let refreshing = null;
 
 // ===== DUPLICATES =====
@@ -89,21 +91,25 @@ async function refresh() {
     try {
       const found = await source.fetch();
       lastGood.set(source.name, found);
+      status.set(source.name, { count: found.length, error: null, checkedAt: new Date() });
       counts.push(`${source.name} ${found.length}`);
     } catch (err) {
       // Keep showing this source's previous events rather than dropping them
       console.error(`[collector] ${source.name} failed, keeping last results:`, err.message);
+      status.set(source.name, { count: lastGood.get(source.name)?.length || 0, error: err.message, checkedAt: new Date() });
       counts.push(`${source.name} failed`);
     }
   }
 
   const today = todayLocal();
   const all = SOURCES.flatMap(s => lastGood.get(s.name) || [])
-    .filter(e => e.ymd >= today && Number.isFinite(e.lat) && Number.isFinite(e.lng));
+    .filter(e => e.ymd >= today && Number.isFinite(e.lat) && Number.isFinite(e.lng))
+    .filter(e => distanceKm(e, BAY_AREA) <= BAY_AREA.maxKm); // drop out-of-town events
 
   events = removeDuplicates(all)
     .sort((a, b) => (a.ymd + (a.hm || "99")).localeCompare(b.ymd + (b.hm || "99")))
     .map(toPublic);
+  updatedAt = new Date();
 
   console.log(`[collector] ${events.length} events (${counts.join(", ")}; ${all.length - events.length} duplicates removed) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }
@@ -125,4 +131,13 @@ async function getEvents() {
   return events;
 }
 
-module.exports = { startCollector, getEvents, refreshOnce, removeDuplicates };
+// Per-source counts and errors (no secrets) so problems are visible without server logs
+function getStatus() {
+  return {
+    updatedAt,
+    total: events.length,
+    sources: SOURCES.map(s => ({ name: s.name, ...(status.get(s.name) || { count: 0, error: null, checkedAt: null }) })),
+  };
+}
+
+module.exports = { startCollector, getEvents, getStatus, refreshOnce, removeDuplicates };

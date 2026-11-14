@@ -11,12 +11,22 @@ async function fetchEventbrite() {
   if (!TOKEN || !EVENTBRITE_ORGANIZERS.length) return [];
   const events = [];
 
+  const failures = [];
+
   for (const organizer of EVENTBRITE_ORGANIZERS) {
-    const data = await fetchJson(
-      `https://www.eventbriteapi.com/v3/organizers/${encodeURIComponent(organizer.id)}/events/` +
-      `?status=live&order_by=start_asc&expand=venue`,
-      { headers: { Authorization: `Bearer ${TOKEN}` } }
-    );
+    // One bad organizer id shouldn't hide everyone else's events
+    let data;
+    try {
+      data = await fetchJson(
+        `https://www.eventbriteapi.com/v3/organizers/${encodeURIComponent(organizer.id)}/events/` +
+        `?status=live&order_by=start_asc&expand=venue`,
+        { headers: { Authorization: `Bearer ${TOKEN}` } }
+      );
+    } catch (err) {
+      console.error(`[collector] Eventbrite organizer "${organizer.name}" failed:`, err.message);
+      failures.push(err.message);
+      continue;
+    }
 
     for (const e of data.events || []) {
       if (e.online_event || !e.start?.local) continue;
@@ -46,6 +56,9 @@ async function fetchEventbrite() {
       });
     }
   }
+
+  // Every organizer failing usually means the token itself is wrong — report it
+  if (failures.length === EVENTBRITE_ORGANIZERS.length) throw new Error(`all organizers failed (${failures[0]})`);
   return events;
 }
 

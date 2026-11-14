@@ -15,8 +15,12 @@ module.exports = {
   // The id is the number at the end of an organizer's Eventbrite page URL,
   // e.g. eventbrite.com/o/some-promoter-12345678901 -> "12345678901".
   // Needs EVENTBRITE_TOKEN in Railway.
+  // category: shown on the map for that organizer's events.
   EVENTBRITE_ORGANIZERS: [
-    // { id: "12345678901", name: "Example Promoter" },
+    { id: "78526362493", name: "Sundaze Day Party", category: "Festivals & Entertainment" },
+    { id: "35720383553", name: "TouchFriday", category: "R&B & Soul" },
+    { id: "2208700429", name: "Skyconcepts Entertainment", category: "Festivals & Entertainment" },
+    { id: "15557819704", name: "United Tribes of Africa", category: "Festivals & Entertainment" },
   ],
 
   // Calendar feeds (iCal / .ics links) — Luma calendars, Google Calendars,
