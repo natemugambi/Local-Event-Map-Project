@@ -655,7 +655,8 @@ body {
   font-weight: 600;
 }
 
-.event-distance {
+.event-distance,
+.popup-distance {
   color: #8fb6ff !important;
 }
 

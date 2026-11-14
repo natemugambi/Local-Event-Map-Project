@@ -693,6 +693,7 @@ function renderEvents(eventsToRender) {
           <div class="popup-meta">📅 ${safe.date} · ${safe.time}</div>
           <div class="popup-meta">📍 ${where}</div>
           ${approximate ? `<div class="popup-note">Exact address shared by the host</div>` : ""}
+          ${userLocation ? `<div class="popup-meta popup-distance">🧭 ${escapeHtml(distanceLabel(event))}</div>` : ""}
           ${price ? `<div class="popup-meta">🎟️ ${price}</div>` : ""}
           <div class="popup-actions">
             ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="popup-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
