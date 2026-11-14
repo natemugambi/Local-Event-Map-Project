@@ -19,6 +19,7 @@ const openers = new Map();   // event key -> function that opens its popup (for 
 let youAreHere = null;       // blue dot from "Near me"
 let userLocation = null;     // { lat, lng } once the visitor shares it — kept in this page only
 let sortBy = "date";         // "date" (soonest first) or "distance" (nearest first)
+let userPickedSort = false;  // once someone taps Soonest/Nearest themselves, we stop switching for them
 
 // Logged-in user from localStorage (only a hint — the server checks the token)
 function storedUser() {
@@ -232,6 +233,9 @@ async function loadEvents() {
   } catch (error) {
     console.error("Couldn't open the shared event:", error);
   }
+
+  // A shared link should land on that event, not jump to a re-sorted list
+  if (!new URLSearchParams(location.search).get("event")) useLocationIfAllowed();
 }
 
 // ===== DATES =====
@@ -468,10 +472,10 @@ function addNearMe() {
 
 // Asks the browser for the visitor's location (once; reused after that), drops the blue
 // "you are here" dot, and refreshes the list so cards show distances. Returns null if refused.
-async function locateUser() {
+async function locateUser({ quiet = false } = {}) {
   if (userLocation) return userLocation;
   if (!navigator.geolocation) {
-    alert("Your browser can't share your location.");
+    if (!quiet) alert("Your browser can't share your location.");
     return null;
   }
   try {
@@ -479,7 +483,7 @@ async function locateUser() {
       navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }));
     userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
   } catch {
-    alert("Couldn't get your location. Check that location access is allowed for this site.");
+    if (!quiet) alert("Couldn't get your location. Check that location access is allowed for this site.");
     return null;
   }
   if (!youAreHere) {
@@ -489,8 +493,26 @@ async function locateUser() {
     });
   }
   youAreHere.setPosition(userLocation);
+  // With a location, nearest-first is the default — unless they've picked a sort themselves
+  if (!userPickedSort) setSort("distance");
   applyFilters(); // cards now show "x mi away"
   return userLocation;
+}
+
+function setSort(value) {
+  sortBy = value;
+  document.querySelectorAll(".sort-btn").forEach(b => b.classList.toggle("active", b.dataset.sort === value));
+}
+
+// If this visitor already allowed location for the site, start on Nearest without asking.
+// (We never pop up the permission prompt on page load — only when they tap Near me / Nearest.)
+async function useLocationIfAllowed() {
+  try {
+    const permission = await navigator.permissions?.query({ name: "geolocation" });
+    if (permission?.state === "granted") await locateUser({ quiet: true });
+  } catch {
+    // Browsers without the Permissions API just start on Soonest
+  }
 }
 
 // Straight-line distance in miles
@@ -826,14 +848,14 @@ function setupFilters() {
 
   const sortBtns = document.querySelectorAll(".sort-btn");
   sortBtns.forEach(btn => btn.addEventListener("click", async function () {
+    userPickedSort = true;
     if (this.dataset.sort === "distance" && !userLocation) {
       this.textContent = "Locating…";
       const here = await locateUser();
       this.textContent = "Nearest";
       if (!here) return; // location refused — stay on Soonest
     }
-    sortBtns.forEach(b => b.classList.toggle("active", b === this));
-    sortBy = this.dataset.sort;
+    setSort(this.dataset.sort);
     applyFilters();
     document.getElementById("event-list").scrollTop = 0;
   }));
