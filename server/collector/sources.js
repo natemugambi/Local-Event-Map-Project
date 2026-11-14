@@ -13,9 +13,9 @@ module.exports = {
     "R&B",
     "hip hop",
     "neo soul",
-    "amapiano",
+    // Not "amapiano" or "reggae": tested Nov 2026 — Ticketmaster answered "amapiano" with
+    // unrelated EDM tours and "reggae" with surf/jam bands. "dancehall" covers the reggae artists.
     "dancehall",
-    "reggae",
     "soca",
     "gospel",
     { q: "juneteenth", category: "Community Gatherings" },
