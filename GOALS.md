@@ -24,7 +24,7 @@ open it, see what's happening tonight, know if you can get in.
 
 ## More event sources (collector is live — these switch on more sources)
 
-- [ ] **SeatGeek:** free developer account at seatgeek.com → get a client ID → Railway → Variables → `SEATGEEK_CLIENT_ID`
+- [x] **SeatGeek:** connected Nov 14, 2026 — adds ~10 events Ticketmaster doesn't have
 - [ ] **Calendar feeds:** collect Luma / Google Calendar / org calendar links (Black Student Unions, cultural centers, promoters) and add them to `CALENDAR_FEEDS`
 - [ ] Meetup — confirm whether its API needs a paid Pro plan before building
 - [ ] Review queue for broad calendars (e.g. UC Berkeley's) — only trusted sources publish automatically today
