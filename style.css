@@ -160,7 +160,7 @@ body {
   color: #c9a84c;
 }
 
-.user-menu-list button {
+.user-menu-list #logout-btn {
   border-top: 1px solid #262626;
   border-radius: 0 0 6px 6px;
   margin-top: 4px;
@@ -618,6 +618,156 @@ body {
   background: #262626;
   padding: 4px 9px;
   border-radius: 999px;
+}
+
+/* ===== SEARCH ROW + SAVED TOGGLE ===== */
+.search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.search-row #event-search {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.saved-toggle {
+  flex-shrink: 0;
+  width: 38px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  color: #aaa;
+  font-size: 17px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saved-toggle:hover,
+.saved-toggle.on {
+  color: #ff6b8a;
+  border-color: #ff6b8a;
+}
+
+/* ===== HEART (SAVE) BUTTONS ===== */
+.heart-btn {
+  background: rgba(13, 13, 13, 0.7);
+  border: none;
+  color: #f0ece4;
+  font-size: 16px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s, color 0.15s;
+}
+
+.heart-btn:hover {
+  transform: scale(1.1);
+}
+
+.heart-btn.on {
+  color: #ff6b8a;
+}
+
+.card-heart {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.popup-heart {
+  background: #262626;
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+}
+
+/* ===== POPUP TOOLS: share, calendar, report ===== */
+.popup-actions {
+  align-items: center;
+}
+
+.popup-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.popup-tool,
+.popup .report-btn {
+  background: none;
+  border: 1px solid #3a3a3a;
+  color: #aaa;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.popup-tool:hover {
+  border-color: #c9a84c;
+  color: #c9a84c;
+}
+
+.cal-menu {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.cal-menu[hidden] {
+  display: none;
+}
+
+.cal-menu a,
+.cal-menu button {
+  background: #202020;
+  border: none;
+  color: #ddd;
+  font-size: 12px;
+  text-align: left;
+  padding: 8px 10px;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.cal-menu a:hover,
+.cal-menu button:hover {
+  background: #2a2a2a;
+  color: #c9a84c;
+}
+
+/* ===== NEAR ME (map button) ===== */
+.near-me-btn {
+  margin: 12px 12px 0 0;
+  background: rgba(20, 20, 20, 0.92);
+  border: 1px solid #2a2a2a;
+  color: #f0ece4;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.near-me-btn:hover {
+  border-color: #4c8dff;
+  color: #8fb6ff;
+}
+
+/* Category with no events right now */
+.filter-btn.empty {
+  opacity: 0.4;
 }
 
 /* ===== DATE HEADINGS IN THE LIST ===== */

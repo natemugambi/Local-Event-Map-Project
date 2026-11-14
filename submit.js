@@ -52,6 +52,7 @@ document.getElementById("submit-form").addEventListener("submit", async function
       lng: coords.lng,
       url: formData.get("url") || null,
       location_approximate: document.getElementById("location_approximate").checked,
+      image: importedImage, // photo from the imported Eventbrite/Luma page, if any
     };
 
     const headers = { "Content-Type": "application/json" };
@@ -117,6 +118,7 @@ document.getElementById("import-btn").addEventListener("click", async () => {
     fill("url", data.url);
     if (data.age_restriction) document.getElementById("age_restriction").value = data.age_restriction;
     document.getElementById("location_approximate").checked = data.approximate;
+    setImportedImage(data.image);
 
     // Tell the host what still needs their attention
     const notes = ["Imported! Check every field before submitting."];
@@ -136,6 +138,21 @@ document.getElementById("import-btn").addEventListener("click", async () => {
 });
 
 // ===== GEOCODE ADDRESS TO LAT/LNG =====
+// ===== EVENT PHOTO (from import) =====
+// The server only returns photos from Eventbrite/Luma's image servers; we show a
+// preview and let the host remove it before posting.
+let importedImage = null;
+
+function setImportedImage(url) {
+  importedImage = url && safeUrl(url) ? url : null;
+  const box = document.getElementById("import-photo");
+  const img = document.getElementById("import-photo-img");
+  box.hidden = !importedImage;
+  if (importedImage) img.src = importedImage; // set as a property, never as HTML
+}
+
+document.getElementById("import-photo-remove").addEventListener("click", () => setImportedImage(null));
+
 function geocodeAddress(address) {
   const statusEl = document.getElementById("geocode-status");
   statusEl.textContent = "Locating address...";

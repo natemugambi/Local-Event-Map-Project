@@ -13,6 +13,23 @@ let currentFilter = "All";  // category button
 let currentWhen = "any";     // date button: any / today / weekend / week
 let searchText = "";         // search box
 let updatedAt = null;        // when the server last refreshed its events
+let savedOnly = false;       // the ♡ toggle next to the search box
+const saved = new Map();     // event key -> saved copy, for the logged-in user
+const openers = new Map();   // event key -> function that opens its popup (for shared links)
+let youAreHere = null;       // blue dot from "Near me"
+
+// Logged-in user from localStorage (only a hint — the server checks the token)
+function storedUser() {
+  try { return JSON.parse(localStorage.getItem("tg_user")) || null; } catch { return null; }
+}
+
+// Stable id for an event, used in share links and saved events:
+// community events use their database id, collected ones their date + name
+function eventKey(event) {
+  if (event.submitted && event.id != null) return `c${event.id}`;
+  const slug = String(event.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+  return `${eventYmd(event) || "tba"}-${slug || "event"}`;
+}
 let allEvents = [];
 
 // One color per category — used for pins, the legend, card labels and photo placeholders
@@ -75,6 +92,7 @@ function initMap() {
     renderer: { render: renderCluster },
   });
   addLegend();
+  addNearMe();
 
   // Clicking anywhere on the map (not on a pin) clears the current selection
   map.addListener("click", clearSelection);
@@ -133,6 +151,7 @@ function renderNav(username) {
           <span class="user-avatar"></span><span class="nav-username"></span><span class="caret">▾</span>
         </button>
         <div class="user-menu-list" id="user-menu-list" hidden>
+          <button id="menu-saved">♥ Saved events</button>
           <a href="my-events.html">My Events</a>
           <a href="account.html">Account</a>
           <button id="logout-btn">Log Out</button>
@@ -149,6 +168,11 @@ function renderNav(username) {
     btn.addEventListener("click", e => { e.stopPropagation(); setOpen(list.hidden); });
     document.addEventListener("click", e => { if (!list.contains(e.target)) setOpen(false); });
     document.addEventListener("keydown", e => { if (e.key === "Escape") setOpen(false); });
+
+    document.getElementById("menu-saved").addEventListener("click", () => {
+      setOpen(false);
+      if (!savedOnly) document.getElementById("saved-toggle").click();
+    });
 
     document.getElementById("logout-btn").addEventListener("click", () => {
       localStorage.removeItem("tg_user");
@@ -191,10 +215,20 @@ async function loadEvents() {
       return true;
     }).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
+    await loadSaved();
+    markEmptyCategories();
     applyFilters();
   } catch (error) {
     console.error("Failed to load events:", error);
     eventList.innerHTML = `<p style="color:#888; text-align:center; padding: 40px 20px; font-size:14px;">Events are temporarily unavailable. Please try again shortly.</p>`;
+    return;
+  }
+
+  // Opened from a shared link? A problem here must never break the list itself.
+  try {
+    openSharedEvent();
+  } catch (error) {
+    console.error("Couldn't open the shared event:", error);
   }
 }
 
@@ -237,6 +271,219 @@ function dateGroup(ymd, today) {
     return `Later in ${new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", timeZone: "UTC" })}`;
   }
   return new Date(`${ymd}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+// ===== SAVED EVENTS (♡) =====
+async function loadSaved() {
+  const user = storedUser();
+  saved.clear();
+  if (!user?.token) return;
+  try {
+    const res = await fetch(`${SERVER_URL}/api/saved`, { headers: { Authorization: `Bearer ${user.token}` } });
+    if (!res.ok) return;
+    for (const { key, event } of await res.json()) saved.set(key, event);
+  } catch (err) {
+    console.error("Could not load saved events:", err);
+  }
+}
+
+async function toggleSaved(event, buttons) {
+  const user = storedUser();
+  if (!user?.token) {
+    window.location.href = "login.html?reason=auth";
+    return;
+  }
+  const key = eventKey(event);
+  const wasSaved = saved.has(key);
+  // Update the hearts right away; undo if the server says no
+  wasSaved ? saved.delete(key) : saved.set(key, event);
+  syncHearts(key);
+  try {
+    const res = await fetch(`${SERVER_URL}/api/saved/${encodeURIComponent(key)}`, {
+      method: wasSaved ? "DELETE" : "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+      body: wasSaved ? undefined : JSON.stringify(event),
+    });
+    if (res.status === 401) {
+      localStorage.removeItem("tg_user");
+      window.location.href = "login.html?reason=auth";
+      return;
+    }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Couldn't save");
+  } catch (err) {
+    wasSaved ? saved.set(key, event) : saved.delete(key);
+    syncHearts(key);
+    alert(friendlyError(err, "Couldn't update saved events. Please try again."));
+  }
+  if (savedOnly) applyFilters();
+}
+
+function heartButton(key, extraClass = "") {
+  const on = saved.has(key);
+  return `<button class="heart-btn ${extraClass} ${on ? "on" : ""}" data-key="${escapeHtml(key)}" aria-pressed="${on}" aria-label="${on ? "Remove from saved" : "Save event"}">${on ? "♥" : "♡"}</button>`;
+}
+
+// Every heart for this event (card + popup) shows the same state
+function syncHearts(key) {
+  document.querySelectorAll(`.heart-btn[data-key="${CSS.escape(key)}"]`).forEach(btn => {
+    const on = saved.has(key);
+    btn.classList.toggle("on", on);
+    btn.textContent = on ? "♥" : "♡";
+    btn.setAttribute("aria-pressed", String(on));
+    btn.setAttribute("aria-label", on ? "Remove from saved" : "Save event");
+  });
+}
+
+// ===== SHARE LINKS =====
+// findthespot.net/?event=<key> opens the map on that event
+function shareUrl(event) {
+  return `${location.origin}${location.pathname}?event=${encodeURIComponent(eventKey(event))}`;
+}
+
+async function shareEvent(event, btn) {
+  const url = shareUrl(event);
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: event.name, text: `${event.name} · ${event.date}`, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    btn.textContent = "Link copied ✓";
+    setTimeout(() => { btn.textContent = "Share"; }, 2000);
+  } catch (err) {
+    if (err?.name !== "AbortError") prompt("Copy this link:", url);
+  }
+}
+
+function openSharedEvent() {
+  const key = new URLSearchParams(location.search).get("event");
+  if (!key) return;
+  const open = openers.get(key);
+  if (open) open(true);
+  else {
+    const s = document.getElementById("list-summary");
+    if (s) s.textContent = "Shared event not found";
+  }
+}
+
+// Shows the open event in the address bar, so copying the URL shares it
+function setUrlEvent(key) {
+  const url = new URL(location.href);
+  if (key) url.searchParams.set("event", key);
+  else url.searchParams.delete("event");
+  history.replaceState(null, "", url);
+}
+
+// ===== ADD TO CALENDAR =====
+// Bay Area wall-clock time -> real moment in time (handles daylight saving)
+function laToUtc(ymd, hm) {
+  const [y, mo, d] = ymd.split("-").map(Number);
+  const [h, mi] = hm.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, h, mi);
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", hourCycle: "h23",
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(new Date(guess)).map(p => [p.type, p.value]));
+  const shownAsLa = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  return new Date(guess + (guess - shownAsLa));
+}
+
+const compactUtc = date => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+// Start/end for calendars: timed events last 3 hours; unknown times become all-day
+function calendarTimes(event) {
+  const ymd = eventYmd(event);
+  if (!ymd) return null;
+  const hm = eventHm(event);
+  if (hm === "99:99") {
+    const next = new Date(Date.parse(`${ymd}T12:00:00Z`) + 86400000).toISOString().slice(0, 10);
+    return { allDay: true, start: ymd.replace(/-/g, ""), end: next.replace(/-/g, "") };
+  }
+  const start = laToUtc(ymd, hm);
+  return { allDay: false, start: compactUtc(start), end: compactUtc(new Date(start.getTime() + 3 * 3600000)) };
+}
+
+function eventLocation(event) {
+  return event.location_approximate ? `${event.city} (exact address from the host)` : `${event.venue}, ${event.city}`;
+}
+
+function googleCalendarUrl(event) {
+  const t = calendarTimes(event);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: event.name,
+    dates: `${t.start}/${t.end}`,
+    details: `${event.url ? `Tickets & info: ${event.url}\n` : ""}Found on The Spot: ${shareUrl(event)}`,
+    location: eventLocation(event),
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+// .ics file for Apple Calendar / Outlook, made in the browser
+function downloadIcs(event) {
+  const t = calendarTimes(event);
+  const esc = v => String(v || "").replace(/\\/g, "\\\\").replace(/([,;])/g, "\\$1").replace(/\r?\n/g, "\\n");
+  const when = t.allDay
+    ? [`DTSTART;VALUE=DATE:${t.start}`, `DTEND;VALUE=DATE:${t.end}`]
+    : [`DTSTART:${t.start}`, `DTEND:${t.end}`];
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//The Spot//findthespot.net//EN",
+    "BEGIN:VEVENT",
+    `UID:${eventKey(event)}@findthespot.net`,
+    `DTSTAMP:${compactUtc(new Date())}`,
+    ...when,
+    `SUMMARY:${esc(event.name)}`,
+    `LOCATION:${esc(eventLocation(event))}`,
+    `DESCRIPTION:${esc(`${event.url ? `Tickets & info: ${event.url}\n` : ""}Found on The Spot: ${shareUrl(event)}`)}`,
+    event.url ? `URL:${event.url}` : "",
+    "END:VEVENT", "END:VCALENDAR",
+  ].filter(Boolean).join("\r\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+  link.download = `${eventKey(event)}.ics`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+}
+
+// ===== NEAR ME =====
+// Asks the browser for the visitor's location and centers the map there.
+// The location stays in the browser — it's never sent to our server.
+function addNearMe() {
+  const btn = document.createElement("button");
+  btn.className = "near-me-btn";
+  btn.type = "button";
+  btn.textContent = "◎ Near me";
+  btn.addEventListener("click", () => {
+    if (!navigator.geolocation) return alert("Your browser can't share your location.");
+    btn.textContent = "Finding you…";
+    navigator.geolocation.getCurrentPosition(pos => {
+      const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (!youAreHere) {
+        youAreHere = new google.maps.Marker({
+          map, clickable: false, zIndex: 9998, title: "You are here",
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#4c8dff", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 },
+        });
+      }
+      youAreHere.setPosition(here);
+      map.panTo(here);
+      map.setZoom(13);
+      btn.textContent = "◎ Near me";
+    }, () => {
+      btn.textContent = "◎ Near me";
+      alert("Couldn't get your location. Check that location access is allowed for this site.");
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  });
+  map.controls[google.maps.ControlPosition.TOP_RIGHT].push(btn);
+}
+
+// Category buttons with nothing in them are dimmed instead of leading to an empty list
+function markEmptyCategories() {
+  document.querySelectorAll(".filter-btn").forEach(btn => {
+    if (btn.dataset.filter === "All") return;
+    const count = allEvents.filter(e => e.category === btn.dataset.filter).length;
+    btn.classList.toggle("empty", count === 0);
+    btn.title = count === 0 ? "No events in this category right now" : `${count} event${count === 1 ? "" : "s"}`;
+  });
 }
 
 // ===== MAP PIECES =====
@@ -309,9 +556,12 @@ function renderEvents(eventsToRender) {
   closeActiveInfoWindow();
   hoverRing.setMap(null);
   activeCard = null;
+  openers.clear();
 
   if (eventsToRender.length === 0) {
-    eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events match your filters.</p>`;
+    eventList.innerHTML = savedOnly
+      ? `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No saved events yet. Tap ♡ on an event to save it.</p>`
+      : `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events match your filters.</p>`;
     return;
   }
 
@@ -335,6 +585,7 @@ function renderEvents(eventsToRender) {
     const color = categoryColor(event.category); // fixed value from CATEGORY_COLORS
     const price = Number.isFinite(event.price_min) ? `From $${Math.round(event.price_min)}` : "";
     const position = { lat: event.lat, lng: event.lng };
+    const key = eventKey(event);
 
     // --- DATE HEADING ---
     const group = dateGroup(eventYmd(event), today);
@@ -391,7 +642,16 @@ function renderEvents(eventsToRender) {
           ${price ? `<div class="popup-meta">🎟️ ${price}</div>` : ""}
           <div class="popup-actions">
             ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="popup-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
-            ${event.submitted ? `<button class="report-btn" data-id="${safe.id}">Report</button>` : ""}
+            ${heartButton(key, "popup-heart")}
+          </div>
+          <div class="popup-tools">
+            <button class="popup-tool share-btn">Share</button>
+            ${eventYmd(event) ? `<button class="popup-tool cal-btn" aria-expanded="false">Add to calendar ▾</button>` : ""}
+            ${event.submitted ? `<button class="popup-tool report-btn" data-id="${safe.id}">Report</button>` : ""}
+          </div>
+          <div class="cal-menu" hidden>
+            <a class="cal-google" target="_blank" rel="noopener noreferrer">Google Calendar</a>
+            <button class="cal-ics">Apple / Outlook (.ics)</button>
           </div>
         </div>
       </div>
@@ -404,13 +664,37 @@ function renderEvents(eventsToRender) {
       infoWindow.setPosition(position);
       infoWindow.open({ map });
       google.maps.event.addListenerOnce(infoWindow, "domready", () => {
-        const btn = document.querySelector(`.report-btn[data-id="${CSS.escape(String(event.id))}"]`);
-        if (btn) btn.addEventListener("click", () => reportEvent(event.id, btn));
-        const photo = document.querySelector(".popup-photo");
+        const box = [...document.querySelectorAll(".popup")].pop();
+        if (!box) return;
+        const report = box.querySelector(".report-btn");
+        if (report) report.addEventListener("click", () => reportEvent(event.id, report));
+        const photo = box.querySelector(".popup-photo");
         if (photo) photo.addEventListener("error", () => photo.remove());
+        box.querySelector(".heart-btn").addEventListener("click", () => toggleSaved(event));
+        syncHearts(key); // the popup's HTML was built earlier — show the current saved state
+        const share = box.querySelector(".share-btn");
+        share.addEventListener("click", () => shareEvent(event, share));
+        const calBtn = box.querySelector(".cal-btn");
+        if (calBtn) {
+          const menu = box.querySelector(".cal-menu");
+          box.querySelector(".cal-google").href = googleCalendarUrl(event); // built from data, set as a property — never parsed as HTML
+          calBtn.addEventListener("click", () => {
+            menu.hidden = !menu.hidden;
+            calBtn.setAttribute("aria-expanded", String(!menu.hidden));
+          });
+          box.querySelector(".cal-ics").addEventListener("click", () => downloadIcs(event));
+        }
       });
       setActiveCard(index);
+      setUrlEvent(key);
     }
+
+    // Used by shared links: zoom in like a card click, then open
+    openers.set(key, () => {
+      map.panTo(position);
+      if (map.getZoom() < 15) map.setZoom(15);
+      openPopup();
+    });
 
     marker.addListener("click", openPopup);
     // Pin <-> card: hovering a pin lights up its card
@@ -432,6 +716,7 @@ function renderEvents(eventsToRender) {
       <div class="event-card-photo">
         ${safe.image ? `<img src="${safe.image}" alt="" loading="lazy" />` : photoPlaceholder(color)}
         ${cardAge ? `<div class="photo-age">${cardAge}</div>` : ""}
+        ${heartButton(key, "card-heart")}
       </div>
       <div class="event-card-body">
         <div class="event-card-category">${safe.category}${event.submitted ? " · Community" : ""}</div>
@@ -468,6 +753,10 @@ function renderEvents(eventsToRender) {
     if (cardLink) {
       cardLink.addEventListener("click", (e) => e.stopPropagation());
     }
+    card.querySelector(".heart-btn").addEventListener("click", e => {
+      e.stopPropagation(); // don't also open the popup
+      toggleSaved(event);
+    });
 
     section.appendChild(card);
   });
@@ -502,6 +791,16 @@ function setupFilters() {
     applyFilters();
   }));
 
+  const savedBtn = document.getElementById("saved-toggle");
+  savedBtn.addEventListener("click", () => {
+    if (!storedUser()?.token) return (window.location.href = "login.html?reason=auth");
+    savedOnly = !savedOnly;
+    savedBtn.classList.toggle("on", savedOnly);
+    savedBtn.textContent = savedOnly ? "♥" : "♡";
+    savedBtn.setAttribute("aria-pressed", String(savedOnly));
+    applyFilters();
+  });
+
   // Wait until typing pauses briefly before re-drawing the list and map
   let typingTimer;
   document.getElementById("event-search").addEventListener("input", e => {
@@ -534,7 +833,17 @@ let shownCount = 0;
 function applyFilters() {
   const today = todayYmd();
   const words = searchText.split(/\s+/).filter(Boolean);
-  const filtered = allEvents.filter(e => {
+  // Saved view: saved events still on the map, plus upcoming saved ones that dropped off
+  let pool = allEvents;
+  if (savedOnly) {
+    const live = allEvents.filter(e => saved.has(eventKey(e)));
+    const liveKeys = new Set(live.map(eventKey));
+    const extra = [...saved.entries()]
+      .filter(([k, e]) => !liveKeys.has(k) && (eventYmd(e) || "") >= today && Number.isFinite(e.lat))
+      .map(([, e]) => e);
+    pool = [...live, ...extra].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  }
+  const filtered = pool.filter(e => {
     if (currentFilter !== "All" && e.category !== currentFilter) return false;
     if (!matchesWhen(e, today)) return false;
     // Every typed word must appear somewhere in the name, venue, city or category
@@ -551,7 +860,9 @@ function updateSummary() {
   const el = document.getElementById("list-summary");
   if (!el || !allEvents.length) return;
   const total = allEvents.length;
-  const count = shownCount === total ? `${total} events` : `${shownCount} of ${total} events`;
+  const count = savedOnly
+    ? `${shownCount} saved`
+    : shownCount === total ? `${total} events` : `${shownCount} of ${total} events`;
   let ago = "";
   if (updatedAt) {
     const mins = Math.max(0, Math.round((Date.now() - updatedAt) / 60000));
@@ -576,6 +887,7 @@ function setActiveCard(index) {
 
 function clearSelection() {
   closeActiveInfoWindow();
+  setUrlEvent(null);
   hoverRing.setMap(null);
   if (activeCard !== null) {
     const card = document.querySelector(`.event-card[data-index="${activeCard}"]`);
