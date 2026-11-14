@@ -1,6 +1,6 @@
 // SeatGeek Platform API — searched by keyword within 30 miles of SF.
 // Switches on when SEATGEEK_CLIENT_ID is set in Railway.
-const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal, sleep, safeImage } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal, sleep, safeImage, keywordParts, withHint } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
@@ -33,7 +33,8 @@ async function fetchSeatGeek() {
   if (!CLIENT_ID) return [];
   const events = [];
 
-  for (const keyword of SEARCH_KEYWORDS) {
+  for (const k of SEARCH_KEYWORDS) {
+    const { q: keyword, category: hint } = keywordParts(k);
     await sleep(500);
     const data = await fetchJson(
       `https://api.seatgeek.com/2/events?client_id=${encodeURIComponent(CLIENT_ID)}` +
@@ -49,7 +50,7 @@ async function fetchSeatGeek() {
       events.push({
         source: "SeatGeek",
         name: e.title,
-        category: mapCategory(e),
+        category: withHint(mapCategory(e), hint),
         ymd: e.datetime_local.slice(0, 10),
         // SeatGeek marks unknown start times with time_tbd and a placeholder time
         hm: e.time_tbd ? null : e.datetime_local.slice(11, 16),

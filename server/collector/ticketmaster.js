@@ -1,5 +1,5 @@
 // Ticketmaster Discovery API — searched by keyword within 30 miles of SF.
-const { BAY_AREA, fetchJson, parseAgeRestriction, sleep, safeImage } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, sleep, safeImage, keywordParts, withHint } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const TM_KEY = process.env.TICKETMASTER_KEY;
@@ -28,7 +28,8 @@ async function fetchTicketmaster() {
   if (!TM_KEY) return [];
   const events = [];
 
-  for (const keyword of SEARCH_KEYWORDS) {
+  for (const k of SEARCH_KEYWORDS) {
+    const { q: keyword, category: hint } = keywordParts(k);
     await sleep(500); // Ticketmaster allows ~5 requests/second — stay well under
     const data = await fetchJson(
       `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TM_KEY}` +
@@ -44,7 +45,7 @@ async function fetchTicketmaster() {
       events.push({
         source: "Ticketmaster",
         name: e.name,
-        category: mapCategory(e.classifications?.[0]?.segment?.name, e.classifications?.[0]?.genre?.name),
+        category: withHint(mapCategory(e.classifications?.[0]?.segment?.name, e.classifications?.[0]?.genre?.name), hint),
         ymd: date,
         hm: e.dates?.start?.localTime?.slice(0, 5) || null,
         venue: venue.name || "Venue TBA",

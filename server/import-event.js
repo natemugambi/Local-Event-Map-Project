@@ -10,6 +10,19 @@ const EVENTBRITE_TOKEN = process.env.EVENTBRITE_TOKEN;
 const ALLOWED_HOSTS = ["eventbrite.com", "partiful.com", "lu.ma", "luma.com", "posh.vip", "dice.fm", "ra.co", "meetup.com"];
 const MAX_BYTES = 3 * 1024 * 1024;
 
+// Community-event photos are only accepted from these image servers (Eventbrite, Luma).
+// Keep in sync with img-src in /_headers. Partiful's photo host isn't confirmed yet.
+const COMMUNITY_IMAGE_HOSTS = ["img.evbuc.com", "cdn.evbuc.com", "images.lumacdn.com"];
+
+function safeCommunityImage(url) {
+  try {
+    const u = new URL(String(url));
+    return u.protocol === "https:" && COMMUNITY_IMAGE_HOSTS.includes(u.hostname) && u.href.length <= 1000 ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
 function isAllowedHost(hostname) {
   return ALLOWED_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`));
 }
@@ -81,6 +94,7 @@ async function fromEventbriteApi(url) {
     city: address.city,
     online: Boolean(e.online_event),
     description: e.description?.text,
+    image: e.logo?.original?.url || e.logo?.url,
   };
 }
 
@@ -106,6 +120,7 @@ function fromJsonLd(html) {
     city: decodeEntities(addr?.addressLocality || cityFrom(address)),
     online: /Online/i.test(e.eventAttendanceMode || "") || /Virtual/i.test(loc["@type"] || ""),
     description: decodeEntities(e.description),
+    image: [].concat(e.image || [])[0]?.url || [].concat(e.image || [])[0],
   };
 }
 
@@ -134,7 +149,7 @@ function fromPartiful(html) {
 function fromOpenGraph(html) {
   const meta = name => decodeEntities((html.match(new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]*)"`, "i")) || [])[1]);
   const title = meta("og:title").replace(/\s*[|·]\s*(Partiful|Luma|Eventbrite|Posh|DICE|Meetup)\s*$/i, "");
-  return title ? { name: title, description: meta("og:description") } : null;
+  return title ? { name: title, description: meta("og:description"), image: meta("og:image") } : null;
 }
 
 async function importEvent(link) {
@@ -148,6 +163,8 @@ async function importEvent(link) {
   if (!found) {
     const html = await fetchPage(url);
     found = fromJsonLd(html) || fromPartiful(html) || fromOpenGraph(html);
+    // Structured data sometimes has no photo while the link-preview tags do
+    if (found && !found.image) found.image = fromOpenGraph(html)?.image;
   }
   if (!found?.name) throw new ImportError("Couldn't find event details on that page. You can still fill in the form yourself.");
 
@@ -164,7 +181,8 @@ async function importEvent(link) {
     age_restriction: parseAgeRestriction([found.name, found.description]),
     approximate: Boolean(found.approximate),
     online: Boolean(found.online),
+    image: safeCommunityImage(found.image),
   };
 }
 
-module.exports = { importEvent, ImportError, isAllowedHost };
+module.exports = { importEvent, ImportError, isAllowedHost, safeCommunityImage };

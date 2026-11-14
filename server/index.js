@@ -7,7 +7,7 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { pool, initDB } = require("./db");
 const { startCollector, getEvents, getStatus } = require("./collector");
-const { importEvent, ImportError } = require("./import-event");
+const { importEvent, ImportError, safeCommunityImage } = require("./import-event");
 
 const app = express();
 app.disable("x-powered-by"); // don't advertise that we run Express
@@ -50,6 +50,7 @@ const submitLimiter = ipLimiter(24 * 60 * 60 * 1000, 10, "Too many events submit
 // Link import: each one makes our server fetch another site's page
 const importLimiter = ipLimiter(60 * 60 * 1000, 30, "Too many imports. Try again later.");
 // Emails: stops anyone using the site to spam someone's inbox
+const savedLimiter = ipLimiter(60 * 60 * 1000, 300, "Too many changes to saved events. Try again later.");
 const emailLimiter = ipLimiter(60 * 60 * 1000, 5, "Too many email requests. Try again later.");
 
 app.use(cors({
@@ -315,7 +316,8 @@ app.get("/api/submitted-events", async (req, res) => {
   // Past events drop off the map automatically; NULL dates (old rows) still show
   const result = await pool.query(
     // Only the fields the map displays — never user_id or report counts
-    `SELECT id, name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate
+    `SELECT id, name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate,
+            image_url AS image
      FROM submitted_events
      WHERE report_count < $1
        AND (event_date IS NULL OR event_date >= CURRENT_DATE)
@@ -345,7 +347,7 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
     return res.status(403).json({ error: "Please verify your email before posting events. Check your inbox, or resend the link from your Account page." });
   }
 
-  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate, image } = req.body;
 
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null || !age_restriction) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -357,6 +359,10 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
 
   if (url && !isSafeUrl(url)) {
     return res.status(400).json({ error: "Event link must start with http:// or https://" });
+  }
+
+  if (image && !safeCommunityImage(image)) {
+    return res.status(400).json({ error: "That photo can't be used. Photos come from importing an Eventbrite or Luma link." });
   }
 
   if (event_date && event_date < new Date().toISOString().slice(0, 10)) {
@@ -376,9 +382,9 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
   }
 
   const result = await pool.query(
-    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date, age_restriction, location_approximate)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null, age_restriction, location_approximate === true]
+    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date, age_restriction, location_approximate, image_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null, age_restriction, location_approximate === true, image ? safeCommunityImage(image) : null]
   );
 
   res.status(201).json({ id: result.rows[0].id });
@@ -410,10 +416,14 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only edit your own events" });
 
-  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate, image } = req.body;
 
   if (url && !isSafeUrl(url)) {
     return res.status(400).json({ error: "Event link must start with http:// or https://" });
+  }
+
+  if (image && !safeCommunityImage(image)) {
+    return res.status(400).json({ error: "That photo can't be used." });
   }
 
   if (age_restriction !== undefined && !AGE_OPTIONS.includes(age_restriction)) {
@@ -421,14 +431,67 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   }
 
   await pool.query(
-    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10, age_restriction=$11, location_approximate=$12 WHERE id=$13`,
+    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10, age_restriction=$11, location_approximate=$12, image_url=$13 WHERE id=$14`,
     [name || event.name, category || event.category, date || event.date, time || event.time,
      city || event.city, venue || event.venue, lat || event.lat, lng || event.lng,
      url !== undefined ? url : event.url, event_date || event.event_date,
      age_restriction || event.age_restriction,
-     typeof location_approximate === "boolean" ? location_approximate : event.location_approximate, req.params.id]
+     typeof location_approximate === "boolean" ? location_approximate : event.location_approximate,
+     image === null ? null : image ? safeCommunityImage(image) : event.image_url, // null removes the photo
+     req.params.id]
   );
 
+  res.json({ success: true });
+});
+
+// ===== SAVED EVENTS (the ♡ on cards) =====
+const MAX_SAVED = 200;
+const SAVED_KEY = /^[a-z0-9-]{1,140}$/;
+
+// Keep only the fields the map shows, as plain short values — never store arbitrary JSON
+function savedSnapshot(e = {}) {
+  const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
+  const num = v => (Number.isFinite(v) ? v : null);
+  return {
+    name: str(e.name, 200), category: str(e.category, 60), date: str(e.date, 60), time: str(e.time, 30),
+    venue: str(e.venue, 120), city: str(e.city, 60), start: str(e.start, 16), event_date: str(e.event_date, 30),
+    url: e.url && isSafeUrl(e.url) ? str(e.url, 1000) : null,
+    image: /^https:\/\//.test(e.image || "") ? str(e.image, 1000) : null,
+    lat: num(e.lat), lng: num(e.lng), price_min: num(e.price_min),
+    age_restriction: AGE_OPTIONS.includes(e.age_restriction) ? e.age_restriction : null,
+    location_approximate: e.location_approximate === true,
+    submitted: e.submitted === true,
+    id: Number.isInteger(e.id) ? e.id : null,
+  };
+}
+
+app.get("/api/saved", requireAuth, async (req, res) => {
+  const result = await pool.query(
+    `SELECT event_key, event FROM saved_events WHERE user_id = $1 ORDER BY created_at`,
+    [req.user.userId]
+  );
+  res.json(result.rows.map(r => ({ key: r.event_key, event: r.event })));
+});
+
+app.put("/api/saved/:key", requireAuth, savedLimiter, async (req, res) => {
+  if (!SAVED_KEY.test(req.params.key)) return res.status(400).json({ error: "Invalid event" });
+  const snapshot = savedSnapshot(req.body);
+  if (!snapshot.name || snapshot.lat === null || snapshot.lng === null) return res.status(400).json({ error: "Invalid event" });
+
+  const count = await pool.query(`SELECT COUNT(*) FROM saved_events WHERE user_id = $1`, [req.user.userId]);
+  if (parseInt(count.rows[0].count) >= MAX_SAVED) {
+    return res.status(400).json({ error: `You can save up to ${MAX_SAVED} events. Remove some first.` });
+  }
+  await pool.query(
+    `INSERT INTO saved_events (user_id, event_key, event) VALUES ($1, $2, $3)
+     ON CONFLICT (user_id, event_key) DO UPDATE SET event = EXCLUDED.event`,
+    [req.user.userId, req.params.key, snapshot]
+  );
+  res.json({ success: true });
+});
+
+app.delete("/api/saved/:key", requireAuth, savedLimiter, async (req, res) => {
+  await pool.query(`DELETE FROM saved_events WHERE user_id = $1 AND event_key = $2`, [req.user.userId, req.params.key]);
   res.json({ success: true });
 });
 

@@ -93,6 +93,23 @@ async function initDB() {
     )
   `);
 
+  // Photo for a community event, picked up when the host imports from Eventbrite/Luma
+  await pool.query(`
+    ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS image_url TEXT
+  `);
+
+  // Events a user hearted. "event" is a copy of what the map showed, so the saved list
+  // still works if the event later drops off a ticket site. Deleted with the account.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS saved_events (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      event_key TEXT NOT NULL,
+      event JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (user_id, event_key)
+    )
+  `);
+
   // One row per (user, event) report — the primary key stops duplicate reports
   await pool.query(`
     CREATE TABLE IF NOT EXISTS event_reports (

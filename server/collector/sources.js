@@ -3,12 +3,31 @@
 // go on the map automatically. Changes go live on the next deploy.
 
 module.exports = {
-  // Ticketmaster + SeatGeek: searched within 30 miles of SF for each keyword
+  // Ticketmaster + SeatGeek: searched within 30 miles of SF for each keyword.
+  // "category" is used when the ticket site's own genre doesn't place the event
+  // (e.g. a Kwanzaa celebration has no music genre, so it goes under Community).
+  // Each keyword is one request per source every 30 minutes — Ticketmaster allows
+  // 5,000 a day, so there's room for ~100 keywords.
   SEARCH_KEYWORDS: [
     "afrobeats",
     "R&B",
     "hip hop",
-    "juneteenth",
+    "neo soul",
+    "amapiano",
+    "dancehall",
+    "reggae",
+    "soca",
+    "gospel",
+    { q: "juneteenth", category: "Community Gatherings" },
+    { q: "kwanzaa", category: "Community Gatherings" },
+    { q: "black history", category: "Community Gatherings" },
+    { q: "black business", category: "Community Gatherings" },
+    { q: "black comedy", category: "Comedy & Arts" },
+    { q: "comedy jam", category: "Comedy & Arts" },
+    { q: "spoken word", category: "Comedy & Arts" },
+    { q: "poetry", category: "Comedy & Arts" },
+    { q: "caribbean", category: "Festivals & Entertainment" },
+    { q: "african festival", category: "Festivals & Entertainment" },
   ],
 
   // (Eventbrite: its API only lists events for your own account, so other promoters'

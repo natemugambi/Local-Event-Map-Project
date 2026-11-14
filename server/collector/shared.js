@@ -98,6 +98,16 @@ function safeImage(url) {
   }
 }
 
+// Keywords are either "text" or { q: "text", category: "..." } — see sources.js
+function keywordParts(k) {
+  return typeof k === "string" ? { q: k, category: null } : { q: k.q, category: k.category || null };
+}
+
+// The keyword's category wins only when the ticket site's genre fell through to the default
+function withHint(mapped, hint) {
+  return hint && mapped === "Festivals & Entertainment" ? hint : mapped;
+}
+
 async function fetchJson(url, options = {}) {
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
@@ -118,5 +128,5 @@ async function fetchText(url) {
 
 module.exports = {
   BAY_AREA, USER_AGENT, displayDate, displayTime, toLocalParts, todayLocal,
-  parseAgeRestriction, isRelevant, fetchJson, fetchText, sleep, cleanName, safeImage,
+  parseAgeRestriction, isRelevant, fetchJson, fetchText, sleep, cleanName, safeImage, keywordParts, withHint,
 };
