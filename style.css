@@ -620,6 +620,45 @@ body {
   border-radius: 999px;
 }
 
+/* ===== COUNT + SORT ROW ===== */
+.sort-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.sort-toggle {
+  display: flex;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.sort-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sort-btn.active {
+  background: #2a2a2a;
+  color: #f0ece4;
+  font-weight: 600;
+}
+
+.event-distance {
+  color: #8fb6ff !important;
+}
+
 /* ===== SEARCH ROW + SAVED TOGGLE ===== */
 .search-row {
   display: flex;

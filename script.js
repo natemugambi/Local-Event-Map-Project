@@ -17,6 +17,8 @@ let savedOnly = false;       // the ♡ toggle next to the search box
 const saved = new Map();     // event key -> saved copy, for the logged-in user
 const openers = new Map();   // event key -> function that opens its popup (for shared links)
 let youAreHere = null;       // blue dot from "Near me"
+let userLocation = null;     // { lat, lng } once the visitor shares it — kept in this page only
+let sortBy = "date";         // "date" (soonest first) or "distance" (nearest first)
 
 // Logged-in user from localStorage (only a hint — the server checks the token)
 function storedUser() {
@@ -453,27 +455,57 @@ function addNearMe() {
   btn.className = "near-me-btn";
   btn.type = "button";
   btn.textContent = "◎ Near me";
-  btn.addEventListener("click", () => {
-    if (!navigator.geolocation) return alert("Your browser can't share your location.");
+  btn.addEventListener("click", async () => {
     btn.textContent = "Finding you…";
-    navigator.geolocation.getCurrentPosition(pos => {
-      const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      if (!youAreHere) {
-        youAreHere = new google.maps.Marker({
-          map, clickable: false, zIndex: 9998, title: "You are here",
-          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#4c8dff", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 },
-        });
-      }
-      youAreHere.setPosition(here);
-      map.panTo(here);
-      map.setZoom(13);
-      btn.textContent = "◎ Near me";
-    }, () => {
-      btn.textContent = "◎ Near me";
-      alert("Couldn't get your location. Check that location access is allowed for this site.");
-    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    const here = await locateUser();
+    btn.textContent = "◎ Near me";
+    if (!here) return;
+    map.panTo(here);
+    map.setZoom(13);
   });
   map.controls[google.maps.ControlPosition.TOP_RIGHT].push(btn);
+}
+
+// Asks the browser for the visitor's location (once; reused after that), drops the blue
+// "you are here" dot, and refreshes the list so cards show distances. Returns null if refused.
+async function locateUser() {
+  if (userLocation) return userLocation;
+  if (!navigator.geolocation) {
+    alert("Your browser can't share your location.");
+    return null;
+  }
+  try {
+    const pos = await new Promise((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }));
+    userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  } catch {
+    alert("Couldn't get your location. Check that location access is allowed for this site.");
+    return null;
+  }
+  if (!youAreHere) {
+    youAreHere = new google.maps.Marker({
+      map, clickable: false, zIndex: 9998, title: "You are here",
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 7, fillColor: "#4c8dff", fillOpacity: 1, strokeColor: "#ffffff", strokeWeight: 2 },
+    });
+  }
+  youAreHere.setPosition(userLocation);
+  applyFilters(); // cards now show "x mi away"
+  return userLocation;
+}
+
+// Straight-line distance in miles
+function milesBetween(a, b) {
+  const rad = x => (x * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 7917.6 * Math.asin(Math.sqrt(h));
+}
+
+function distanceLabel(event) {
+  if (!userLocation) return "";
+  const mi = milesBetween(userLocation, event);
+  const text = mi < 0.1 ? "Right by you" : `${mi < 10 ? mi.toFixed(1) : Math.round(mi)} mi away`;
+  return event.location_approximate ? `About ${text.toLowerCase()}` : text;
 }
 
 // Category buttons with nothing in them are dimmed instead of leading to an empty list
@@ -588,7 +620,7 @@ function renderEvents(eventsToRender) {
     const key = eventKey(event);
 
     // --- DATE HEADING ---
-    const group = dateGroup(eventYmd(event), today);
+    const group = sortBy === "distance" ? "Nearest to you" : dateGroup(eventYmd(event), today);
     if (group !== lastGroup) {
       section = document.createElement("section");
       const heading = document.createElement("h3");
@@ -724,6 +756,7 @@ function renderEvents(eventsToRender) {
         <div class="event-card-meta">
           <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>
           <span><span class="icon">📍</span>${where}</span>
+          ${userLocation ? `<span class="event-distance"><span class="icon">🧭</span>${escapeHtml(distanceLabel(event))}</span>` : ""}
         </div>
         <div class="event-card-footer">
           ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : "<span></span>"}
@@ -791,6 +824,20 @@ function setupFilters() {
     applyFilters();
   }));
 
+  const sortBtns = document.querySelectorAll(".sort-btn");
+  sortBtns.forEach(btn => btn.addEventListener("click", async function () {
+    if (this.dataset.sort === "distance" && !userLocation) {
+      this.textContent = "Locating…";
+      const here = await locateUser();
+      this.textContent = "Nearest";
+      if (!here) return; // location refused — stay on Soonest
+    }
+    sortBtns.forEach(b => b.classList.toggle("active", b === this));
+    sortBy = this.dataset.sort;
+    applyFilters();
+    document.getElementById("event-list").scrollTop = 0;
+  }));
+
   const savedBtn = document.getElementById("saved-toggle");
   savedBtn.addEventListener("click", () => {
     if (!storedUser()?.token) return (window.location.href = "login.html?reason=auth");
@@ -850,6 +897,9 @@ function applyFilters() {
     const haystack = `${e.name} ${e.venue} ${e.city} ${e.category}`.toLowerCase();
     return words.every(w => haystack.includes(w));
   });
+  if (sortBy === "distance" && userLocation) {
+    filtered.sort((a, b) => milesBetween(userLocation, a) - milesBetween(userLocation, b));
+  }
   shownCount = filtered.length;
   renderEvents(filtered);
   updateSummary();
