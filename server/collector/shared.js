@@ -84,11 +84,15 @@ function cleanName(name) {
   return cleaned || String(name || "").trim();
 }
 
-// Only https image links make it to the site
+// Only https photos from the ticket sites' own image servers make it to the site.
+// Keep in sync with img-src in /_headers, or the browser will block the photos.
+const IMAGE_HOSTS = ["ticketm.net", "ticketweb.com", "seatgeek.com", "seatgeekimages.com"];
+
 function safeImage(url) {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" ? u.href : null;
+    const allowed = IMAGE_HOSTS.some(h => u.hostname === h || u.hostname.endsWith(`.${h}`));
+    return u.protocol === "https:" && allowed ? u.href : null;
   } catch {
     return null;
   }

@@ -19,6 +19,16 @@ function mapCategory(e) {
   return "Festivals & Entertainment";
 }
 
+// Headliner's photo first; SeatGeek keeps it in "image" or in the "images" size list
+function performerImage(performers) {
+  const ordered = [...performers.filter(p => p.primary), ...performers.filter(p => !p.primary)];
+  for (const p of ordered) {
+    const url = safeImage(p.image || p.images?.huge || Object.values(p.images || {})[0]);
+    if (url) return url;
+  }
+  return null;
+}
+
 async function fetchSeatGeek() {
   if (!CLIENT_ID) return [];
   const events = [];
@@ -49,7 +59,7 @@ async function fetchSeatGeek() {
         lng: loc.lon,
         url: e.url,
         age_restriction: parseAgeRestriction([e.title, e.description]),
-        image: safeImage((e.performers || []).find(p => p.primary)?.image || e.performers?.[0]?.image),
+        image: performerImage(e.performers || []),
         price_min: e.stats?.lowest_price ?? null,
       });
     }
