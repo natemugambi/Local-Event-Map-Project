@@ -15,6 +15,7 @@ open it, see what's happening tonight, know if you can get in.
 - [ ] **App version** — The Spot is already installable as a PWA; decide whether to polish that or wrap it as a store app
 
 ## Next (launch polish)
+- [ ] Design polish: "82 events · updated 5 min ago" line, search box, Today / This Weekend date filters, tidier nav bar, lighter "View Tickets" buttons
 
 - [ ] Loading states and general polish across pages
 - [ ] Migrate Google Maps loading to `loading=async` and `AdvancedMarkerElement` (current usage is deprecated but still works)
@@ -61,6 +62,7 @@ The code is live; these two steps (done by you in dashboards) switch on the emai
 ## Done
 
 - [x] Import from link on the submit form (Eventbrite via API, Luma, Partiful, Posh, DICE, RA, Meetup) + approximate-location option for house parties; Eventbrite token in Railway (Nov 2026)
+- [x] Map & list redesign: event photos, prices, date headings, category pin colors + legend, grouped pins, cleaner map, card/pin linking, tidier names (Nov 2026)
 - [x] Event collector: Ticketmaster, SeatGeek and calendar feeds gathered every 30 min with duplicate removal; map loads in one request (Nov 2026)
 - [x] User account security: case-insensitive usernames/emails, event list no longer exposes account IDs, change password, log out everywhere, password reset, email verification, account deletion, Privacy Policy page (Oct 2026)
 - [x] Age restrictions on events — All Ages / 18+ / 21+ badges; Ticketmaster events show "Check venue" unless their listing states an age (Oct 2026)
