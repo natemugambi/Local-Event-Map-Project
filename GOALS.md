@@ -15,6 +15,8 @@ open it, see what's happening tonight, know if you can get in.
 - [ ] **App version** — The Spot is already installable as a PWA; decide whether to polish that or wrap it as a store app
 
 ## Next (launch polish)
+- [ ] Partiful photos on import: find where Partiful hosts event images, then add the host to server/import-event.js + _headers
+- [ ] Community & Comedy events: ticket sites have few — they will mostly come from community posts and calendar feeds
 
 - [ ] Loading states and general polish across pages
 - [ ] Migrate Google Maps loading to `loading=async` and `AdvancedMarkerElement` (current usage is deprecated but still works)
@@ -61,6 +63,7 @@ The code is live; these two steps (done by you in dashboards) switch on the emai
 ## Done
 
 - [x] Import from link on the submit form (Eventbrite via API, Luma, Partiful, Posh, DICE, RA, Meetup) + approximate-location option for house parties; Eventbrite token in Railway (Nov 2026)
+- [x] Save events (♡), share links, add to calendar, Near me, link previews, community-event photos from imports, more search keywords (Nov 2026)
 - [x] Map & list redesign: event photos, prices, date headings, category pin colors + legend, grouped pins, cleaner map, card/pin linking, tidier names, search + date filters, account menu (Nov 2026)
 - [x] Event collector: Ticketmaster, SeatGeek and calendar feeds gathered every 30 min with duplicate removal; map loads in one request (Nov 2026)
 - [x] User account security: case-insensitive usernames/emails, event list no longer exposes account IDs, change password, log out everywhere, password reset, email verification, account deletion, Privacy Policy page (Oct 2026)
