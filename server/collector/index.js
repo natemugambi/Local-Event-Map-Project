@@ -9,6 +9,7 @@ const { fetchEventbrite } = require("./eventbrite");
 const { fetchCalendars } = require("./ical");
 
 const REFRESH_MINUTES = 30;
+const RETRY_MINUTES = 1; // when a source fails and has nothing to fall back on
 
 // Earlier sources win when the same event shows up in more than one place
 const SOURCES = [
@@ -110,6 +111,12 @@ async function refresh() {
     .sort((a, b) => (a.ymd + (a.hm || "99")).localeCompare(b.ymd + (b.hm || "99")))
     .map(toPublic);
   updatedAt = new Date();
+
+  // A source that failed with no earlier results to show (e.g. right after a deploy):
+  // try again soon rather than leaving it empty for 30 minutes
+  if (SOURCES.some(s => status.get(s.name)?.error && !lastGood.has(s.name))) {
+    setTimeout(() => refreshOnce().catch(err => console.error("[collector] retry failed:", err)), RETRY_MINUTES * 60 * 1000);
+  }
 
   console.log(`[collector] ${events.length} events (${counts.join(", ")}; ${all.length - events.length} duplicates removed) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }

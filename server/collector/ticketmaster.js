@@ -1,5 +1,5 @@
 // Ticketmaster Discovery API — searched by keyword within 30 miles of SF.
-const { BAY_AREA, fetchJson, parseAgeRestriction } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, sleep } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const TM_KEY = process.env.TICKETMASTER_KEY;
@@ -21,6 +21,7 @@ async function fetchTicketmaster() {
   const events = [];
 
   for (const keyword of SEARCH_KEYWORDS) {
+    await sleep(500); // Ticketmaster allows ~5 requests/second — stay well under
     const data = await fetchJson(
       `https://app.ticketmaster.com/discovery/v2/events.json?apikey=${TM_KEY}` +
       `&keyword=${encodeURIComponent(keyword)}&latlong=${BAY_AREA.lat},${BAY_AREA.lng}` +

@@ -1,6 +1,6 @@
 // SeatGeek Platform API — searched by keyword within 30 miles of SF.
 // Switches on when SEATGEEK_CLIENT_ID is set in Railway.
-const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal } = require("./shared");
+const { BAY_AREA, fetchJson, parseAgeRestriction, todayLocal, sleep } = require("./shared");
 const { SEARCH_KEYWORDS } = require("./sources");
 
 const CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
@@ -20,6 +20,7 @@ async function fetchSeatGeek() {
   const events = [];
 
   for (const keyword of SEARCH_KEYWORDS) {
+    await sleep(500);
     const data = await fetchJson(
       `https://api.seatgeek.com/2/events?client_id=${encodeURIComponent(CLIENT_ID)}` +
       `&q=${encodeURIComponent(keyword)}&lat=${BAY_AREA.lat}&lon=${BAY_AREA.lng}` +

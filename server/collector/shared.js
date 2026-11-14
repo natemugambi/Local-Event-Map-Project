@@ -71,11 +71,20 @@ function isRelevant(...texts) {
   return RELEVANT.test(texts.filter(Boolean).join(" ").replace(FALSE_RELEVANT, ""));
 }
 
-// Fetch JSON with a timeout so one slow site can't hold up the whole refresh
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Fetch JSON with a timeout so one slow site can't hold up the whole refresh.
+// 429 means "too many requests" — wait and try again (up to 3 tries).
 async function fetchJson(url, options = {}) {
-  const res = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`${res.status} from ${new URL(url).host}`);
-  return res.json();
+  for (let attempt = 1; ; attempt++) {
+    const res = await fetch(url, { ...options, signal: AbortSignal.timeout(20000) });
+    if (res.status === 429 && attempt < 3) {
+      await sleep(2000 * attempt);
+      continue;
+    }
+    if (!res.ok) throw new Error(`${res.status} from ${new URL(url).host}`);
+    return res.json();
+  }
 }
 
 async function fetchText(url) {
@@ -86,5 +95,5 @@ async function fetchText(url) {
 
 module.exports = {
   BAY_AREA, USER_AGENT, displayDate, displayTime, toLocalParts, todayLocal,
-  parseAgeRestriction, isRelevant, fetchJson, fetchText,
+  parseAgeRestriction, isRelevant, fetchJson, fetchText, sleep,
 };
