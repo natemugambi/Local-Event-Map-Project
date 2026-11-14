@@ -6,15 +6,18 @@ const { resetLookupBudget } = require("./geocode");
 const { fetchTicketmaster } = require("./ticketmaster");
 const { fetchSeatGeek } = require("./seatgeek");
 const { fetchCalendars } = require("./ical");
+const { CALENDAR_FEEDS } = require("./sources");
 
 const REFRESH_MINUTES = 30;
 const RETRY_MINUTES = 1; // when a source fails and has nothing to fall back on
 
-// Earlier sources win when the same event shows up in more than one place
+// Earlier sources win when the same event shows up in more than one place.
+// "configured" = its Railway variable (or feed list) is set, so the status page can
+// tell "no key" apart from "key works but nothing matched".
 const SOURCES = [
-  { name: "Ticketmaster", fetch: fetchTicketmaster },
-  { name: "SeatGeek", fetch: fetchSeatGeek },
-  { name: "Calendars", fetch: fetchCalendars },
+  { name: "Ticketmaster", fetch: fetchTicketmaster, configured: Boolean(process.env.TICKETMASTER_KEY) },
+  { name: "SeatGeek", fetch: fetchSeatGeek, configured: Boolean(process.env.SEATGEEK_CLIENT_ID) },
+  { name: "Calendars", fetch: fetchCalendars, configured: CALENDAR_FEEDS.length > 0 },
 ];
 
 const lastGood = new Map(); // source name -> its last successful list of events
@@ -141,7 +144,7 @@ function getStatus() {
   return {
     updatedAt,
     total: events.length,
-    sources: SOURCES.map(s => ({ name: s.name, ...(status.get(s.name) || { count: 0, error: null, checkedAt: null }) })),
+    sources: SOURCES.map(s => ({ name: s.name, configured: s.configured, ...(status.get(s.name) || { count: 0, error: null, checkedAt: null }) })),
   };
 }
 
