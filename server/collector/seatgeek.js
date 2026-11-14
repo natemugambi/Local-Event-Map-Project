@@ -6,11 +6,11 @@ const { SEARCH_KEYWORDS } = require("./sources");
 const CLIENT_ID = process.env.SEATGEEK_CLIENT_ID;
 
 function mapCategory(e) {
-  // Use the headliner's genres, so a rock show with a hip-hop opener isn't filed as Hip-Hop
+  // Use the headliner's genres, so a rock show with a hip-hop opener isn't filed as Hip-Hop.
+  // If SeatGeek lists no genre for the headliner, fall back to the whole lineup.
   const performers = e.performers || [];
-  const headliner = performers.filter(p => p.primary);
-  const genres = (headliner.length ? headliner : performers.slice(0, 1))
-    .flatMap(p => p.genres || []).map(g => g.name.toLowerCase()).join(" ");
+  const genreText = list => list.flatMap(p => p.genres || []).map(g => g.name.toLowerCase()).join(" ");
+  const genres = genreText(performers.filter(p => p.primary)) || genreText(performers);
   const type = (e.type || "").toLowerCase();
   if (/hip[- ]hop|rap/.test(genres)) return "Hip-Hop & Rap";
   if (/r&b|rnb|soul/.test(genres)) return "R&B & Soul";
