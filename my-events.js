@@ -58,7 +58,7 @@ async function loadMyEvents() {
         <h3>${escapeHtml(event.name)}</h3>
         <div class="my-event-card-meta">
           <span>📅 ${escapeHtml(event.date)} · ${escapeHtml(event.time)}</span>
-          <span>📍 ${escapeHtml(event.venue)}, ${escapeHtml(event.city)}</span>
+          <span>📍 ${escapeHtml(event.venue)}, ${escapeHtml(event.city)}${event.location_approximate ? " · shown as approximate area" : ""}</span>
           ${safeLink ? `<span>🔗 <a href="${safeLink}" target="_blank" rel="noopener noreferrer" style="color:#c9a84c;">${safeLink}</a></span>` : ""}
         </div>
         <div class="my-event-card-actions">
@@ -129,6 +129,7 @@ function openEditModal(event) {
   document.getElementById("edit-venue").value = event.venue;
   document.getElementById("edit-city").value = event.city;
   document.getElementById("edit-url").value = event.url || "";
+  document.getElementById("edit-approximate").checked = Boolean(event.location_approximate);
   document.getElementById("edit-date").min = new Date().toISOString().slice(0, 10);
   editMessage.textContent = "";
   modal.classList.add("active");
@@ -157,6 +158,7 @@ editForm.addEventListener("submit", async (e) => {
     venue: document.getElementById("edit-venue").value,
     city: document.getElementById("edit-city").value,
     url: document.getElementById("edit-url").value || null,
+    location_approximate: document.getElementById("edit-approximate").checked,
   };
 
   try {

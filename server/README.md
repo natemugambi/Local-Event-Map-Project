@@ -19,7 +19,7 @@ Requires a `.env` file in this folder (never committed — see `.gitignore`):
 | `RESEND_API_KEY` | *Optional.* Resend API key for password-reset and email-verification emails. While unset, those emails are skipped and email verification isn't enforced. |
 | `EMAIL_FROM` | *Optional.* Sender address, default `The Spot <no-reply@findthespot.net>` (the domain must be verified in Resend) |
 | `SEATGEEK_CLIENT_ID` | *Optional.* SeatGeek Platform API client ID (free at seatgeek.com/account/develop). Adds SeatGeek events when set. |
-| `EVENTBRITE_TOKEN` | *Optional.* Eventbrite private token. Adds events from the organizers listed in `collector/sources.js` when set. |
+| `EVENTBRITE_TOKEN` | *Optional.* Eventbrite private token. Used by "Import from link" to read Eventbrite events exactly (Eventbrite's API only lists events for your own account, so it isn't a collector source). |
 | `SITE_URL` | *Optional.* Base URL used in email links, default `https://findthespot.net` |
 | `PORT` | Optional, defaults to 3000 |
 
@@ -59,9 +59,17 @@ Tables are created (and the `event_date` column added) automatically at startup 
 
 ## Event collector
 
-`collector/` gathers map events from Ticketmaster, SeatGeek, Eventbrite and calendar
+`collector/` gathers map events from Ticketmaster, SeatGeek and calendar
 (iCal) feeds every 30 minutes, removes duplicates, and serves them from memory at
 `GET /api/events`. To add sources, edit `collector/sources.js` (search keywords,
-Eventbrite organizers, calendar feeds). Calendar addresses are turned into map pins with
+calendar feeds). Calendar addresses are turned into map pins with
 OpenStreetMap's Nominatim service and cached in the `geocode_cache` table. Each refresh
 logs a summary line starting with `[collector]`.
+
+## Import from link
+
+`POST /api/import-event` (logged-in hosts) reads an event link and returns details to
+pre-fill the submit form: Eventbrite via the API, Luma/Posh/DICE via schema.org data,
+Partiful via its page data (address hidden until RSVP, so it suggests approximate
+location). Only the sites in `ALLOWED_HOSTS` in `import-event.js` are fetched, and every
+redirect is checked against that list.

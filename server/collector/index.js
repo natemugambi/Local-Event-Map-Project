@@ -5,7 +5,6 @@ const { BAY_AREA, displayDate, displayTime, todayLocal } = require("./shared");
 const { resetLookupBudget } = require("./geocode");
 const { fetchTicketmaster } = require("./ticketmaster");
 const { fetchSeatGeek } = require("./seatgeek");
-const { fetchEventbrite } = require("./eventbrite");
 const { fetchCalendars } = require("./ical");
 
 const REFRESH_MINUTES = 30;
@@ -15,7 +14,6 @@ const RETRY_MINUTES = 1; // when a source fails and has nothing to fall back on
 const SOURCES = [
   { name: "Ticketmaster", fetch: fetchTicketmaster },
   { name: "SeatGeek", fetch: fetchSeatGeek },
-  { name: "Eventbrite", fetch: fetchEventbrite },
   { name: "Calendars", fetch: fetchCalendars },
 ];
 

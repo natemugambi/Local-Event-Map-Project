@@ -277,3 +277,22 @@ body.my-events-page {
     flex-wrap: wrap;
   }
 }
+
+/* Approximate-location checkbox in the edit modal */
+.modal-card .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #f0ece4;
+  cursor: pointer;
+}
+
+.modal-card .checkbox-label input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: #c9a84c;
+}

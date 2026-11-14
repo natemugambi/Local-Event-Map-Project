@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { pool, initDB } = require("./db");
 const { startCollector, getEvents, getStatus } = require("./collector");
+const { importEvent, ImportError } = require("./import-event");
 
 const app = express();
 app.disable("x-powered-by"); // don't advertise that we run Express
@@ -46,6 +47,8 @@ const signupLimiter = ipLimiter(60 * 60 * 1000, 5, "Too many accounts created fr
 const loginLimiter = ipLimiter(15 * 60 * 1000, 10, "Too many login attempts. Try again in a few minutes.", { skipSuccessfulRequests: true });
 // Submissions: backstop on top of the per-user daily limit
 const submitLimiter = ipLimiter(24 * 60 * 60 * 1000, 10, "Too many events submitted from this network today. Try again tomorrow.");
+// Link import: each one makes our server fetch another site's page
+const importLimiter = ipLimiter(60 * 60 * 1000, 30, "Too many imports. Try again later.");
 // Emails: stops anyone using the site to spam someone's inbox
 const emailLimiter = ipLimiter(60 * 60 * 1000, 5, "Too many email requests. Try again later.");
 
@@ -108,7 +111,7 @@ function requireAuth(req, res, next) {
 }
 
 // ===== EVENTS ENDPOINT =====
-// Events from Ticketmaster, SeatGeek, Eventbrite and calendar feeds, collected in the
+// Events from Ticketmaster, SeatGeek and calendar feeds, collected in the
 // background every 30 minutes (see collector/). Any ?keyword= from older pages is ignored.
 app.get("/api/events", async (req, res) => {
   res.json(await getEvents());
@@ -312,14 +315,29 @@ app.get("/api/submitted-events", async (req, res) => {
   // Past events drop off the map automatically; NULL dates (old rows) still show
   const result = await pool.query(
     // Only the fields the map displays — never user_id or report counts
-    `SELECT id, name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction
+    `SELECT id, name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate
      FROM submitted_events
      WHERE report_count < $1
        AND (event_date IS NULL OR event_date >= CURRENT_DATE)
      ORDER BY event_date ASC NULLS LAST`,
     [REPORT_THRESHOLD]
   );
-  res.json(result.rows);
+  // Approximate-location events: send coordinates rounded to a ~1 km grid, so the
+  // exact address never leaves the server (the browser can't be trusted to hide it)
+  res.json(result.rows.map(e => e.location_approximate
+    ? { ...e, lat: Math.round(e.lat * 100) / 100, lng: Math.round(e.lng * 100) / 100 }
+    : e));
+});
+
+// Pre-fills the submit form from an event link (Eventbrite, Luma, Partiful, ...)
+app.post("/api/import-event", requireAuth, importLimiter, async (req, res) => {
+  try {
+    res.json(await importEvent(req.body?.url));
+  } catch (err) {
+    if (err instanceof ImportError) return res.status(400).json({ error: err.message });
+    console.error("Import failed:", err);
+    res.status(502).json({ error: "Couldn't read that link right now. You can still fill in the form yourself." });
+  }
 });
 
 app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) => {
@@ -327,7 +345,7 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
     return res.status(403).json({ error: "Please verify your email before posting events. Check your inbox, or resend the link from your Account page." });
   }
 
-  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate } = req.body;
 
   if (!name || !category || !date || !time || !city || !venue || lat == null || lng == null || !age_restriction) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -358,9 +376,9 @@ app.post("/api/submitted-events", requireAuth, submitLimiter, async (req, res) =
   }
 
   const result = await pool.query(
-    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date, age_restriction)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
-    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null, age_restriction]
+    `INSERT INTO submitted_events (name, category, date, time, city, venue, lat, lng, url, user_id, event_date, age_restriction, location_approximate)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+    [name, category, date, time, city, venue, lat, lng, url || null, req.user.userId, event_date || null, age_restriction, location_approximate === true]
   );
 
   res.status(201).json({ id: result.rows[0].id });
@@ -392,7 +410,7 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   if (event.user_id !== req.user.userId)
     return res.status(403).json({ error: "You can only edit your own events" });
 
-  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction } = req.body;
+  const { name, category, date, time, city, venue, lat, lng, url, event_date, age_restriction, location_approximate } = req.body;
 
   if (url && !isSafeUrl(url)) {
     return res.status(400).json({ error: "Event link must start with http:// or https://" });
@@ -403,11 +421,12 @@ app.put("/api/submitted-events/:id", requireAuth, async (req, res) => {
   }
 
   await pool.query(
-    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10, age_restriction=$11 WHERE id=$12`,
+    `UPDATE submitted_events SET name=$1, category=$2, date=$3, time=$4, city=$5, venue=$6, lat=$7, lng=$8, url=$9, event_date=$10, age_restriction=$11, location_approximate=$12 WHERE id=$13`,
     [name || event.name, category || event.category, date || event.date, time || event.time,
      city || event.city, venue || event.venue, lat || event.lat, lng || event.lng,
      url !== undefined ? url : event.url, event_date || event.event_date,
-     age_restriction || event.age_restriction, req.params.id]
+     age_restriction || event.age_restriction,
+     typeof location_approximate === "boolean" ? location_approximate : event.location_approximate, req.params.id]
   );
 
   res.json({ success: true });

@@ -44,6 +44,12 @@ async function initDB() {
     ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS age_restriction TEXT NOT NULL DEFAULT 'All Ages'
   `);
 
+  // Host chose to show only an approximate area (e.g. house parties); the public
+  // event list then returns rounded coordinates instead of the exact pin
+  await pool.query(`
+    ALTER TABLE submitted_events ADD COLUMN IF NOT EXISTS location_approximate BOOLEAN NOT NULL DEFAULT false
+  `);
+
   // Bumped to sign out every device at once (log out everywhere, password change)
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0

@@ -3,6 +3,7 @@ const SERVER_URL = "https://local-event-map-project-production.up.railway.app";
 
 let map;
 let markers = [];
+let areaCircles = []; // shaded areas for approximate-location events
 let activeCard = null;
 let activeInfoWindow = null;
 let currentFilter = "All";
@@ -141,9 +142,11 @@ function renderEvents(eventsToRender) {
   const eventList = document.getElementById("event-list");
   eventList.innerHTML = "";
 
-  // Clear old markers
+  // Clear old markers and areas
   markers.forEach(m => m.setMap(null));
   markers = [];
+  areaCircles.forEach(c => c.setMap(null));
+  areaCircles = [];
 
   if (eventsToRender.length === 0) {
     eventList.innerHTML = `<p style="color:#666; text-align:center; padding: 40px 20px; font-size:14px;">No events found for this category.</p>`;
@@ -163,6 +166,26 @@ function renderEvents(eventsToRender) {
       id: escapeHtml(event.id),
     };
 
+    // Host chose to hide the exact address: the server only sends a rounded point,
+    // so we shade the general area and say so instead of implying an exact spot
+    const approximate = Boolean(event.location_approximate);
+    const where = approximate
+      ? `Approximate area · ${safe.city}`
+      : `${safe.venue}, ${safe.city}`;
+    if (approximate) {
+      areaCircles.push(new google.maps.Circle({
+        map,
+        center: { lat: event.lat, lng: event.lng },
+        radius: 800,
+        fillColor: "#c9a84c",
+        fillOpacity: 0.12,
+        strokeColor: "#c9a84c",
+        strokeOpacity: 0.5,
+        strokeWeight: 1,
+        clickable: false,
+      }));
+    }
+
     // --- MARKER ---
     const marker = new google.maps.Marker({
       position: { lat: event.lat, lng: event.lng },
@@ -172,7 +195,7 @@ function renderEvents(eventsToRender) {
         path: google.maps.SymbolPath.CIRCLE,
         scale: 10,
         fillColor: "#c9a84c",
-        fillOpacity: 1,
+        fillOpacity: approximate ? 0.35 : 1, // hollow-looking pin = approximate area
         strokeColor: "#0d0d0d",
         strokeWeight: 2,
       },
@@ -188,7 +211,8 @@ function renderEvents(eventsToRender) {
           </div>
           <div style="font-size:15px; font-weight:700; margin-bottom:8px;">${safe.name}</div>
           <div style="font-size:12px; color:#aaa;">📅 ${safe.date} · ${safe.time}</div>
-          <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${safe.venue}, ${safe.city}</div>
+          <div style="font-size:12px; color:#aaa; margin-top:3px;">📍 ${where}</div>
+          ${approximate ? `<div style="font-size:11px; color:#888; margin-top:3px;">Exact address shared by the host</div>` : ""}
           ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:8px; background:#c9a84c; color:#0d0d0d; font-size:11px; font-weight:700; padding:5px 10px; border-radius:6px; text-decoration:none;">${event.submitted ? "Event Link" : "View Tickets"}</a>` : ""}
           ${event.submitted ? `<button class="report-btn" data-id="${safe.id}" style="margin-top:8px; margin-left:6px; background:none; border:1px solid #444; color:#888; font-size:11px; padding:4px 8px; border-radius:6px; cursor:pointer;">Report</button>` : ""}
         </div>
@@ -222,7 +246,7 @@ function renderEvents(eventsToRender) {
       <h3>${safe.name}</h3>
       <div class="event-card-meta">
         <span><span class="icon">📅</span>${safe.date} · ${safe.time}</span>
-        <span><span class="icon">📍</span>${safe.venue}, ${safe.city}</span>
+        <span><span class="icon">📍</span>${where}</span>
       </div>
       ${safe.url ? `<a href="${safe.url}" target="_blank" rel="noopener noreferrer" class="event-card-link">${event.submitted ? "Event Link ↗" : "View Tickets ↗"}</a>` : ""}
     `;
