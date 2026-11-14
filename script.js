@@ -8,6 +8,7 @@ let activeCard = null;
 let infoWindow = null;     // one shared popup, moved to whichever event is open
 let clusterer = null;      // groups nearby pins into numbered circles
 let hoverRing = null;      // ring shown on the map while hovering a card
+let topZ = 100;            // raises the open event's pin above others at the same venue
 let currentFilter = "All";
 let allEvents = [];
 
@@ -29,6 +30,10 @@ function initMap() {
     zoom: 12,
     center: bayArea,
     clickableIcons: false, // disable Google's own POI popups — only our event pins are interactive
+    // Keep the map clean: zoom buttons only (no Map/Satellite toggle, Street View or fullscreen)
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
 
     styles: [
       { elementType: "geometry", stylers: [{ color: "#1a1a1a" }] },
@@ -363,6 +368,7 @@ function renderEvents(eventsToRender) {
 
     function openPopup() {
       closeActiveInfoWindow();
+      marker.setZIndex(++topZ); // several shows at one venue share a spot — put this one on top
       infoWindow.setContent(popup);
       infoWindow.setPosition(position);
       infoWindow.open({ map });
